@@ -4,80 +4,104 @@ const kind = params.get('kind');
 const file = params.get('file');
 let apply = () => {};
 
+const PLAY = '<svg width="14" height="14" viewBox="0 0 14 14"><path d="M3.5 1.8v10.4a.6.6 0 0 0 .9.5l8.3-5.2a.6.6 0 0 0 0-1L4.4 1.3a.6.6 0 0 0-.9.5z" fill="currentColor"/></svg>';
+const PAUSE = '<svg width="14" height="14" viewBox="0 0 14 14"><rect x="3" y="2" width="3" height="10" rx="1" fill="currentColor"/><rect x="8" y="2" width="3" height="10" rx="1" fill="currentColor"/></svg>';
+
 const fmt = (t) => {
   const m = Math.floor(t / 60); const s = t - m * 60;
   return `${m}:${s.toFixed(2).padStart(5, '0')}`;
 };
 const parse = (str) => {
   const parts = str.trim().split(':').map(Number);
-  if (parts.some(Number.isNaN)) return null;
+  if (!parts.length || parts.some(Number.isNaN)) return null;
   return parts.reduce((acc, v) => acc * 60 + v, 0);
 };
 
 // ---------- Trim ----------
 async function initTrim(info) {
   $('#trim').hidden = false;
-  $('#trim').style.display = 'flex';
-  $('#trim').style.flexDirection = 'column';
-  $('#trim').style.gap = '12px';
   const media = $('#media');
   const duration = info.duration || 0;
   const sel = { start: 0, end: duration };
-  if (!info.isVideo) { media.style.display = 'none'; $('#audio-art').hidden = false; }
+
+  if (info.strip) {
+    $('#strip').src = info.strip;
+    if (!info.isVideo) $('#strip').classList.add('wave');
+  }
+  if (!info.isVideo) {
+    media.style.display = 'none';
+    if (info.strip) { $('#wave-art').src = info.strip; $('#wave-art').hidden = false; }
+  }
   media.src = info.url;
-  media.addEventListener('error', () => { $('#noplay').hidden = false; });
+  media.addEventListener('error', () => { if (info.isVideo) $('#noplay').hidden = false; });
 
   const tl = $('#timeline');
+  const pct = (t) => `${(t / duration) * 100}%`;
   const draw = () => {
-    const pct = (t) => `${(t / duration) * 100}%`;
-    $('#range').style.left = pct(sel.start);
-    $('#range').style.width = `${((sel.end - sel.start) / duration) * 100}%`;
-    $('#h-start').style.left = pct(sel.start);
-    $('#h-end').style.left = pct(sel.end);
-    $('#t-start').value = fmt(sel.start);
-    $('#t-end').value = fmt(sel.end);
-    $('#t-len').textContent = `${fmt(sel.end - sel.start)} selected`;
+    $('#frame').style.left = pct(sel.start);
+    $('#frame').style.right = `${100 - (sel.end / duration) * 100}%`;
+    $('#shade-l').style.width = pct(sel.start);
+    $('#shade-r').style.width = `${100 - (sel.end / duration) * 100}%`;
+    if (document.activeElement !== $('#t-start')) $('#t-start').value = fmt(sel.start);
+    if (document.activeElement !== $('#t-end')) $('#t-end').value = fmt(sel.end);
+    $('#t-len').textContent = fmt(sel.end - sel.start);
   };
   const timeAt = (x) => {
     const r = tl.getBoundingClientRect();
     return Math.min(duration, Math.max(0, ((x - r.left) / r.width) * duration));
   };
   const setEdge = (edge, t) => {
-    if (edge === 'start') sel.start = Math.min(t, sel.end - 0.1);
-    else sel.end = Math.max(t, sel.start + 0.1);
-    media.currentTime = edge === 'start' ? sel.start : sel.end;
+    if (edge === 'start') sel.start = Math.max(0, Math.min(t, sel.end - 0.1));
+    else sel.end = Math.min(duration, Math.max(t, sel.start + 0.1));
+    media.currentTime = sel[edge];
     draw();
   };
 
+  // Drag a grip to move that edge; click elsewhere on the strip to scrub.
   let dragging = null;
   tl.addEventListener('pointerdown', (e) => {
-    const t = timeAt(e.clientX);
-    dragging = e.target.dataset.h || (Math.abs(t - sel.start) < Math.abs(t - sel.end) ? 'start' : 'end');
+    dragging = e.target.dataset.h || 'scrub';
     tl.setPointerCapture(e.pointerId);
-    setEdge(dragging, t);
+    if (dragging === 'scrub') media.currentTime = Math.min(sel.end, Math.max(sel.start, timeAt(e.clientX)));
   });
-  tl.addEventListener('pointermove', (e) => { if (dragging) setEdge(dragging, timeAt(e.clientX)); });
+  tl.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    if (dragging === 'scrub') media.currentTime = Math.min(sel.end, Math.max(sel.start, timeAt(e.clientX)));
+    else setEdge(dragging, timeAt(e.clientX));
+  });
   tl.addEventListener('pointerup', () => { dragging = null; });
+  document.querySelectorAll('.grip').forEach((g) => g.addEventListener('keydown', (e) => {
+    const step = e.shiftKey ? 1 : 0.1;
+    if (e.key === 'ArrowLeft') setEdge(g.dataset.h, sel[g.dataset.h] - step);
+    if (e.key === 'ArrowRight') setEdge(g.dataset.h, sel[g.dataset.h] + step);
+  }));
   for (const edge of ['start', 'end']) {
-    $(`#h-${edge}`).addEventListener('keydown', (e) => {
-      const step = e.shiftKey ? 1 : 0.1;
-      if (e.key === 'ArrowLeft') setEdge(edge, sel[edge] - step);
-      if (e.key === 'ArrowRight') setEdge(edge, sel[edge] + step);
-    });
     $(`#t-${edge}`).addEventListener('change', (e) => {
       const t = parse(e.target.value);
-      if (t != null) setEdge(edge, Math.min(duration, Math.max(0, t))); else draw();
+      if (t != null) setEdge(edge, t);
+      e.target.blur();
+      draw();
     });
   }
 
-  media.addEventListener('timeupdate', () => {
-    $('#playhead').style.left = `${(media.currentTime / duration) * 100}%`;
+  const playBtn = $('#play');
+  playBtn.innerHTML = PLAY;
+  const tick = () => {
+    $('#playhead').style.left = pct(media.currentTime);
     if (!media.paused && media.currentTime >= sel.end) media.pause();
-  });
-  $('#play').addEventListener('click', () => {
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+  media.addEventListener('play', () => { playBtn.innerHTML = PAUSE; });
+  media.addEventListener('pause', () => { playBtn.innerHTML = PLAY; });
+  const toggle = () => {
     if (!media.paused) return media.pause();
-    media.currentTime = sel.start;
+    if (media.currentTime < sel.start || media.currentTime >= sel.end - 0.05) media.currentTime = sel.start;
     media.play().catch(() => {});
+  };
+  playBtn.addEventListener('click', toggle);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === ' ' && e.target.tagName !== 'INPUT') { e.preventDefault(); toggle(); }
   });
 
   apply = () => window.orbital.apply('trim', file, { start: sel.start, end: sel.end });
@@ -85,16 +109,14 @@ async function initTrim(info) {
 }
 
 // ---------- Crop ----------
-const RATIOS = [['Free', null], ['1:1', 1], ['4:5', 4 / 5], ['16:9', 16 / 9], ['9:16', 9 / 16], ['4:3', 4 / 3], ['3:2', 3 / 2]];
+const RATIOS = [['Freeform', null], ['Square', 1], ['4:5', 4 / 5], ['16:9', 16 / 9], ['9:16', 9 / 16], ['4:3', 4 / 3], ['3:2', 3 / 2]];
 
 async function initCrop(info) {
   $('#crop').hidden = false;
-  Object.assign($('#crop').style, { display: 'flex', flexDirection: 'column', gap: '12px' });
   const img = $('#img');
   const box = $('#box');
   let ratio = null;
-  // Box in displayed-image pixels.
-  let b = { x: 0, y: 0, w: 0, h: 0 };
+  let b = { x: 0, y: 0, w: 0, h: 0 }; // in displayed-image pixels
   img.src = info.dataUrl;
   await img.decode();
 
@@ -104,19 +126,19 @@ async function initCrop(info) {
     const { ox, oy } = bounds();
     Object.assign(box.style, { left: `${ox + b.x}px`, top: `${oy + b.y}px`, width: `${b.w}px`, height: `${b.h}px` });
     const s = scale();
-    $('#dims').textContent = `${Math.round(b.w * s)} × ${Math.round(b.h * s)} px`;
+    $('#dims').textContent = `${Math.round(b.w * s)} × ${Math.round(b.h * s)}`;
   };
   const fitRatio = () => {
     const { w, h } = bounds();
-    if (!ratio) { b = { x: w * 0.1, y: h * 0.1, w: w * 0.8, h: h * 0.8 }; return; }
-    let bw = w * 0.9; let bh = bw / ratio;
-    if (bh > h * 0.9) { bh = h * 0.9; bw = bh * ratio; }
+    if (!ratio) { b = { x: 0, y: 0, w, h }; return; }
+    let bw = w; let bh = bw / ratio;
+    if (bh > h) { bh = h; bw = bh * ratio; }
     b = { x: (w - bw) / 2, y: (h - bh) / 2, w: bw, h: bh };
   };
   const clamp = () => {
     const { w, h } = bounds();
-    b.w = Math.min(Math.max(b.w, 20), w); b.h = Math.min(Math.max(b.h, 20), h);
-    b.x = Math.min(Math.max(b.x, 0), w - b.w); b.y = Math.min(Math.max(b.y, 0), h - b.h);
+    b.x = Math.min(Math.max(b.x, 0), w - b.w);
+    b.y = Math.min(Math.max(b.y, 0), h - b.h);
   };
 
   $('#ratios').innerHTML = RATIOS.map(([l], i) => `<button data-i="${i}" class="${i === 0 ? 'on' : ''}">${l}</button>`).join('');
@@ -132,23 +154,23 @@ async function initCrop(info) {
   box.addEventListener('pointerdown', (e) => {
     drag = { corner: e.target.dataset.c || null, sx: e.clientX, sy: e.clientY, start: { ...b } };
     box.setPointerCapture(e.pointerId);
+    box.classList.add('dragging');
   });
   box.addEventListener('pointermove', (e) => {
     if (!drag) return;
     const dx = e.clientX - drag.sx; const dy = e.clientY - drag.sy; const s = drag.start;
     if (!drag.corner) { b.x = s.x + dx; b.y = s.y + dy; clamp(); return draw(); }
     const west = drag.corner.includes('w'); const north = drag.corner.includes('n');
-    let w = s.w + (west ? -dx : dx);
-    let h = s.h + (north ? -dy : dy);
-    if (ratio) { if (Math.abs(dx) > Math.abs(dy)) h = w / ratio; else w = h * ratio; }
     const { w: bw, h: bh } = bounds();
-    w = Math.max(20, Math.min(w, west ? s.x + s.w : bw - s.x));
-    h = Math.max(20, Math.min(h, north ? s.y + s.h : bh - s.y));
+    let w = Math.max(24, Math.min(s.w + (west ? -dx : dx), west ? s.x + s.w : bw - s.x));
+    let h = Math.max(24, Math.min(s.h + (north ? -dy : dy), north ? s.y + s.h : bh - s.y));
     if (ratio) { if (w / h > ratio) w = h * ratio; else h = w / ratio; }
     b = { x: west ? s.x + s.w - w : s.x, y: north ? s.y + s.h - h : s.y, w, h };
     draw();
   });
-  box.addEventListener('pointerup', () => { drag = null; });
+  const end = () => { drag = null; box.classList.remove('dragging'); };
+  box.addEventListener('pointerup', end);
+  box.addEventListener('pointercancel', end);
   window.addEventListener('resize', () => { fitRatio(); draw(); });
 
   apply = () => {
@@ -160,8 +182,9 @@ async function initCrop(info) {
 }
 
 (async () => {
+  document.body.classList.toggle('not-mac', !navigator.platform.startsWith('Mac'));
   const info = await window.orbital.load(kind, file);
-  $('#title').textContent = `${kind === 'crop' ? 'Crop' : 'Trim'} · ${info.name}`;
+  $('#title').textContent = info.name;
   if (kind === 'crop') await initCrop(info); else await initTrim(info);
 })();
 

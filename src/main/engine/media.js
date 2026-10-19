@@ -1,4 +1,5 @@
-const { outPath, probe, runFfmpeg } = require('./util');
+const fs = require('fs');
+const { outPath, probe, runFfmpeg, tmpFile } = require('./util');
 
 const H264 = ['-c:v', 'libx264', '-preset', 'medium', '-pix_fmt', 'yuv420p', '-movflags', '+faststart'];
 const AAC = ['-c:a', 'aac', '-b:a', '160k'];
@@ -117,6 +118,25 @@ module.exports = {
     };
     const o = ops[op];
     return ff(file, o.args, outPath(file, 'mp4', o.suffix), p, o.d);
+  },
+
+  // Editor previews: a row of frames for video, a waveform for audio. Returns PNG bytes.
+  filmstrip: async (file, frames = 12, height = 80) => {
+    const { duration, width, height: h } = await probe(file);
+    const fw = Math.max(16, Math.round((height * (width || 16)) / (h || 9)));
+    const tmp = tmpFile('png');
+    const fps = frames / Math.max(duration, 0.5);
+    try {
+      await runFfmpeg(['-i', file, '-vf', `fps=${fps},scale=${fw}:${height},tile=${frames}x1`, '-frames:v', '1', tmp]);
+      return fs.readFileSync(tmp);
+    } finally { fs.rmSync(tmp, { force: true }); }
+  },
+  waveform: async (file, color = '#ffffff') => {
+    const tmp = tmpFile('png');
+    try {
+      await runFfmpeg(['-i', file, '-filter_complex', `aformat=channel_layouts=mono,showwavespic=s=1600x120:colors=${color}:scale=sqrt`, '-frames:v', '1', tmp]);
+      return fs.readFileSync(tmp);
+    } finally { fs.rmSync(tmp, { force: true }); }
   },
 
   thumbnail: async (file) => {

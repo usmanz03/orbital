@@ -1,50 +1,59 @@
 <!doctype html>
-<html>
+<html class="force-dark">
 <head>
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src file:">
   <title>Orbital Editor</title>
-  <link rel="stylesheet" href="home.css">
+  <link rel="stylesheet" href="theme.css">
   <link rel="stylesheet" href="editor.css">
 </head>
 <body>
   <header class="titlebar">
-    <div class="brand"><span class="logo" aria-hidden="true"></span><span id="title">Editor</span></div>
-    <div class="actions">
-      <button id="cancel" class="ghost">Cancel</button>
-      <button id="apply" class="primary">Save copy</button>
-    </div>
+    <span class="spacer"></span>
+    <span id="title" class="title"></span>
+    <span class="spacer"></span>
+    <button id="cancel" class="btn">Cancel</button>
+    <button id="apply" class="btn primary">Done</button>
   </header>
 
-  <main id="trim" hidden>
-    <div class="viewer">
+  <main id="trim" class="editor" hidden>
+    <div class="stage">
       <video id="media" preload="auto"></video>
-      <div id="audio-art" class="audio-art" hidden></div>
-      <div id="noplay" class="muted small" hidden>Preview isn't available for this format, but trimming still works.</div>
+      <img id="wave-art" class="wave-art" alt="" hidden>
+      <div id="noplay" class="noplay" hidden>Preview isn't available for this format. Trimming still works.</div>
     </div>
-    <div class="timeline" id="timeline">
-      <div class="range" id="range"></div>
-      <div class="playhead" id="playhead"></div>
-      <div class="handle" id="h-start" data-h="start" tabindex="0" aria-label="Start"></div>
-      <div class="handle" id="h-end" data-h="end" tabindex="0" aria-label="End"></div>
+    <div class="controls">
+      <button id="play" class="play" aria-label="Play selection"></button>
+      <div class="trimbar" id="timeline">
+        <div class="strip-wrap"><img id="strip" class="strip" alt=""></div>
+        <div class="shade" id="shade-l"></div>
+        <div class="shade" id="shade-r"></div>
+        <div class="frame" id="frame">
+          <div class="grip l" data-h="start" tabindex="0" aria-label="Start"></div>
+          <div class="grip r" data-h="end" tabindex="0" aria-label="End"></div>
+        </div>
+        <div class="playhead" id="playhead"></div>
+      </div>
     </div>
     <div class="times">
-      <label>Start <input id="t-start" type="text"></label>
-      <button id="play" class="ghost">▶ Play selection</button>
-      <span id="t-len" class="muted"></span>
-      <label>End <input id="t-end" type="text"></label>
+      <input id="t-start" class="time" spellcheck="false" aria-label="Start time">
+      <span id="t-len" class="len"></span>
+      <input id="t-end" class="time" spellcheck="false" aria-label="End time">
     </div>
   </main>
 
-  <main id="crop" hidden>
-    <div class="ratios" id="ratios"></div>
-    <div class="crop-wrap" id="crop-wrap">
+  <main id="crop" class="editor" hidden>
+    <div class="canvas" id="crop-wrap">
       <img id="img" alt="">
       <div id="box" class="box">
+        <div class="thirds"></div>
         <i data-c="nw"></i><i data-c="ne"></i><i data-c="sw"></i><i data-c="se"></i>
       </div>
     </div>
-    <div class="muted small center" id="dims"></div>
+    <div class="toolbar">
+      <div class="segmented" id="ratios"></div>
+      <span id="dims" class="dims"></span>
+    </div>
   </main>
 
   <script src="editor.js"></script>

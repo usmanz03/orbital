@@ -1,0 +1,153 @@
+/* Shared macOS-style tokens and controls for Orbital's windows. */
+:root {
+  --accent: #0a84ff;
+  --accent-ink: #fff;
+  --window: #1e1e20;
+  --group: rgba(255, 255, 255, 0.05);
+  --group-border: rgba(255, 255, 255, 0.07);
+  --separator: rgba(255, 255, 255, 0.08);
+  --control: rgba(255, 255, 255, 0.1);
+  --control-hover: rgba(255, 255, 255, 0.15);
+  --label: rgba(255, 255, 255, 0.92);
+  --secondary: rgba(235, 235, 245, 0.6);
+  --tertiary: rgba(235, 235, 245, 0.3);
+  --green: #30d158;
+  --orange: #ff9f0a;
+  --red: #ff453a;
+  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --spring: cubic-bezier(0.2, 0.9, 0.25, 1.15);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --accent: #007aff;
+    --window: #ececec;
+    --group: rgba(255, 255, 255, 0.62);
+    --group-border: rgba(0, 0, 0, 0.06);
+    --separator: rgba(0, 0, 0, 0.08);
+    --control: rgba(0, 0, 0, 0.06);
+    --control-hover: rgba(0, 0, 0, 0.1);
+    --label: rgba(0, 0, 0, 0.86);
+    --secondary: rgba(60, 60, 67, 0.62);
+    --tertiary: rgba(60, 60, 67, 0.3);
+    --green: #28cd41;
+    --orange: #ff9500;
+    --red: #ff3b30;
+    color-scheme: light;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  background: var(--window);
+  color: var(--label);
+  font: 13px/1.38 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  letter-spacing: -0.006em;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+/* macOS: the window itself is frosted glass (vibrancy); let it show through. */
+body.vibrant, html:has(body.vibrant) { background: transparent; }
+
+h1, h2, h3, p { margin: 0; }
+button { font: inherit; color: inherit; cursor: default; }
+
+/* Title bar area (traffic lights sit at the top-left on macOS). */
+.titlebar { -webkit-app-region: drag; height: 52px; flex: none; display: flex; align-items: center; padding: 0 16px 0 84px; gap: 10px; }
+body.not-mac .titlebar { padding-left: 16px; }
+.titlebar > * { -webkit-app-region: no-drag; }
+.titlebar .spacer { flex: 1; -webkit-app-region: drag; }
+.titlebar .title { font-weight: 600; font-size: 13px; -webkit-app-region: drag; }
+
+/* Buttons */
+.btn {
+  height: 28px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--control);
+  font-weight: 500;
+  transition: background-color 120ms var(--ease), transform 120ms var(--ease);
+  white-space: nowrap;
+}
+.btn:hover { background: var(--control-hover); }
+.btn:active { transform: scale(0.97); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.link { background: none; color: var(--accent); padding: 0 4px; height: auto; }
+
+/* Switch, like NSSwitch */
+.switch {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 38px;
+  height: 22px;
+  margin: 0;
+  border-radius: 11px;
+  background: var(--control-hover);
+  position: relative;
+  transition: background-color 180ms var(--ease);
+  flex: none;
+}
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+  transition: transform 240ms var(--spring);
+}
+.switch:checked { background: var(--accent); }
+.switch:checked::after { transform: translateX(16px); }
+
+/* Pop-up button */
+.popup {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 26px;
+  padding: 0 28px 0 10px;
+  border: 0;
+  border-radius: 6px;
+  font: inherit;
+  color: var(--label);
+  background: var(--control) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='14' viewBox='0 0 10 14' fill='none' stroke='%23888' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 5l3-3 3 3M2 9l3 3 3-3'/%3E%3C/svg%3E") no-repeat right 9px center;
+}
+.popup:hover { background-color: var(--control-hover); }
+
+kbd {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font: 500 12px -apple-system, system-ui, sans-serif;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--control);
+  color: var(--label);
+}
+
+/* Segmented control */
+.segmented { display: inline-flex; padding: 2px; border-radius: 8px; background: var(--control); gap: 2px; }
+.segmented button {
+  height: 24px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--label);
+  transition: background-color 140ms var(--ease), box-shadow 140ms var(--ease);
+}
+.segmented button.on { background: var(--window); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22), 0 0 0 0.5px rgba(0, 0, 0, 0.08); }
+@media (prefers-color-scheme: light) { .segmented button.on { background: #fff; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+}

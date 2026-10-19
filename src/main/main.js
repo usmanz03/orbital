@@ -162,17 +162,28 @@ function registerShortcut() {
 
 // ---------- Windows ----------
 
+// Native-feeling window: frosted vibrancy and inset traffic lights on macOS.
+function windowChrome() {
+  if (isMac) {
+    return {
+      titleBarStyle: 'hiddenInset',
+      vibrancy: 'under-window',
+      visualEffectState: 'followWindow',
+      backgroundColor: '#00000000',
+    };
+  }
+  return { autoHideMenuBar: true, backgroundColor: nativeTheme.shouldUseDarkColors ? '#1e1e20' : '#ececec' };
+}
+
 function openHome() {
   if (home && !home.isDestroyed()) { home.show(); home.focus(); return; }
   home = new BrowserWindow({
-    width: 880,
-    height: 640,
-    minWidth: 720,
+    width: 560,
+    height: 720,
+    minWidth: 480,
     minHeight: 520,
-    title: 'Orbital',
-    titleBarStyle: isMac ? 'hiddenInset' : 'default',
-    backgroundColor: '#0d0f14',
-    autoHideMenuBar: true,
+    title: 'Orbital Settings',
+    ...windowChrome(),
     show: false,
     webPreferences: { preload: path.join(PRELOAD, 'home.js'), contextIsolation: true, sandbox: false },
   });
@@ -184,12 +195,12 @@ function openHome() {
 function openEditor(kind, file) {
   if (editor && !editor.isDestroyed()) editor.close();
   editor = new BrowserWindow({
-    width: kind === 'crop' ? 980 : 860,
-    height: kind === 'crop' ? 760 : 520,
+    width: kind === 'crop' ? 980 : 900,
+    height: kind === 'crop' ? 760 : 620,
+    minWidth: 640,
+    minHeight: 480,
     title: kind === 'crop' ? `Crop — ${path.basename(file)}` : `Trim — ${path.basename(file)}`,
-    titleBarStyle: isMac ? 'hiddenInset' : 'default',
-    backgroundColor: '#0d0f14',
-    autoHideMenuBar: true,
+    ...windowChrome(),
     show: false,
     webPreferences: { preload: path.join(PRELOAD, 'editor.js'), contextIsolation: true, sandbox: false },
   });
@@ -300,7 +311,12 @@ ipcMain.on('app:reveal', (_e, p) => shell.showItemInFolder(p));
 ipcMain.handle('editor:load', async (_e, kind, file) => {
   if (kind === 'crop') return { kind, file, name: path.basename(file), ...(await image.preview(file)) };
   const info = await probe(file);
-  return { kind, file, name: path.basename(file), url: pathToFileURL(file).href, isVideo: kindOf(file) === 'video', ...info };
+  const isVideo = kindOf(file) === 'video' && info.hasVideo;
+  let strip = null;
+  try {
+    strip = `data:image/png;base64,${(isVideo ? await media.filmstrip(file) : await media.waveform(file)).toString('base64')}`;
+  } catch (err) { console.warn('Preview strip failed:', err.message); }
+  return { kind, file, name: path.basename(file), url: pathToFileURL(file).href, isVideo, strip, ...info };
 });
 ipcMain.on('editor:apply', (_e, kind, file, params) => {
   editor?.close();

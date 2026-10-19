@@ -3,78 +3,69 @@
 <head>
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
-  <title>Orbital</title>
+  <title>Orbital Settings</title>
+  <link rel="stylesheet" href="theme.css">
   <link rel="stylesheet" href="home.css">
 </head>
 <body>
-  <header class="titlebar">
-    <div class="brand">
-      <span class="logo" aria-hidden="true"></span>
-      <span>Orbital</span>
-    </div>
-    <span id="pill" class="pill">…</span>
-  </header>
+  <header class="titlebar"><span class="spacer"></span></header>
 
   <main>
-    <section id="permission" class="card warn" hidden>
-      <div>
-        <h2>Turn on Shift-drag</h2>
-        <p id="perm-text">Orbital needs <b>Accessibility</b> access to notice when you drag a file while holding Shift. It only looks at mouse movement, never what you type.</p>
+    <section class="hero">
+      <img class="app-icon" src="../../assets/icon-256.png" alt="">
+      <h1>Orbital</h1>
+      <p id="status" class="status"><span class="dot"></span><span id="status-text">…</span></p>
+      <button id="grant" class="btn primary" hidden>Allow Accessibility Access…</button>
+    </section>
+
+    <h2 class="group-title">Picker</h2>
+    <div class="group">
+      <div class="row">
+        <div class="row-text"><div>Drag trigger</div><div class="row-sub">Hold a key while dragging a file to open the picker</div></div>
+        <input type="checkbox" id="triggerEnabled" class="switch">
       </div>
-      <button id="grant" class="primary">Open System Settings</button>
-    </section>
-
-    <section id="drop" class="drop">
-      <div class="orbit" aria-hidden="true"><i></i><i></i><i></i></div>
-      <h1>Hold <kbd id="mod-key">⇧ Shift</kbd> and drag any file</h1>
-      <p>A radial menu opens under your cursor. Drop on an action and you're done. You can also drop files here, or select them in Finder and press <kbd id="shortcut"></kbd>.</p>
-    </section>
-
-    <div class="grid">
-      <section class="card">
-        <h3>Recent</h3>
-        <ul id="jobs" class="jobs"><li class="empty">Converted files show up here and are saved next to the original.</li></ul>
-      </section>
-
-      <section class="card">
-        <h3>Settings</h3>
-        <label class="row">
-          <span>Trigger key</span>
-          <select id="modifier">
-            <option value="shift">Shift</option>
-            <option value="alt">Option / Alt</option>
-            <option value="ctrl">Control</option>
-          </select>
-        </label>
-        <label class="row">
-          <span>Drag trigger</span>
-          <input type="checkbox" id="triggerEnabled" class="switch">
-        </label>
-        <div class="row">
-          <span>Save to</span>
-          <div class="seg-ctl">
-            <button data-out="same">Same folder</button>
-            <button data-out="folder">Choose…</button>
-          </div>
-        </div>
-        <div id="outdir" class="muted small"></div>
-        <label class="row">
-          <span>Open at login</span>
-          <input type="checkbox" id="openAtLogin" class="switch">
-        </label>
-      </section>
+      <div class="row">
+        <div class="row-text"><div>Trigger key</div></div>
+        <select id="modifier" class="popup">
+          <option value="shift">⇧ Shift</option>
+          <option value="alt">⌥ Option</option>
+          <option value="ctrl">⌃ Control</option>
+        </select>
+      </div>
+      <div class="row">
+        <div class="row-text"><div>Keyboard shortcut</div><div class="row-sub">Opens the picker for files selected in Finder</div></div>
+        <kbd id="shortcut"></kbd>
+      </div>
     </div>
 
-    <section class="card">
-      <h3>Everything Orbital can do <span id="count" class="muted"></span></h3>
-      <div id="catalog" class="catalog"></div>
-    </section>
+    <h2 class="group-title">Output</h2>
+    <div class="group">
+      <div class="row">
+        <div class="row-text"><div>Save converted files</div><div class="row-sub" id="outdir"></div></div>
+        <select id="output" class="popup">
+          <option value="same">Next to original</option>
+          <option value="folder">In a folder…</option>
+        </select>
+      </div>
+    </div>
 
-    <footer class="muted small">
-      <span>100% local. Files never leave your computer.</span>
-      <span id="version"></span>
-    </footer>
+    <h2 class="group-title">General</h2>
+    <div class="group">
+      <div class="row">
+        <div class="row-text"><div>Open at login</div></div>
+        <input type="checkbox" id="openAtLogin" class="switch">
+      </div>
+    </div>
+
+    <h2 class="group-title">Recent</h2>
+    <div class="group" id="jobs">
+      <div class="row empty"><div class="row-sub">Nothing yet. Your conversions will appear here.</div></div>
+    </div>
+
+    <footer id="footer" class="footer"></footer>
   </main>
+
+  <div id="dropveil" class="dropveil"><div>Drop to open the picker</div></div>
   <script src="icons.js"></script>
   <script src="home.js"></script>
 </body>

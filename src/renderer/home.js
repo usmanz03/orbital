@@ -1,88 +1,94 @@
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
-
-const MOD_LABEL = { shift: '⇧ Shift', alt: '⌥ Option', ctrl: '⌃ Control' };
-let status = null;
+const basename = (p) => p.split(/[\\/]/).pop();
 
 function prettyShortcut(acc, mac) {
-  return acc.split('+').map((k) => ({
-    CommandOrControl: mac ? '⌘' : 'Ctrl', Shift: mac ? '⇧' : 'Shift', Alt: mac ? '⌥' : 'Alt', Control: mac ? '⌃' : 'Ctrl', Space: 'Space',
-  })[k] || k).join(mac ? '' : '+');
+  const map = mac
+    ? { CommandOrControl: '⌘', Shift: '⇧', Alt: '⌥', Control: '⌃', Space: 'Space' }
+    : { CommandOrControl: 'Ctrl', Shift: 'Shift', Alt: 'Alt', Control: 'Ctrl', Space: 'Space' };
+  // macOS orders modifiers ⌃⌥⇧⌘.
+  const order = ['Control', 'Alt', 'Shift', 'CommandOrControl'];
+  const keys = acc.split('+').sort((a, b) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99));
+  return keys.map((k) => map[k] || k).join(mac ? ' ' : ' + ');
 }
 
 function renderStatus(s) {
-  status = s;
   const mac = s.platform === 'darwin';
+  document.body.classList.toggle('vibrant', mac);
   document.body.classList.toggle('not-mac', !mac);
-  const pill = $('#pill');
-  const needsPerm = !s.permission && s.hookSupported;
-  if (s.hookRunning) { pill.textContent = '● Shift-drag active'; pill.className = 'pill ok'; }
-  else if (!s.hookSupported) { pill.textContent = 'Shortcut mode (Wayland)'; pill.className = 'pill warn'; }
-  else if (needsPerm) { pill.textContent = 'Needs permission'; pill.className = 'pill warn'; }
-  else { pill.textContent = 'Trigger paused'; pill.className = 'pill warn'; }
-  $('#permission').hidden = !needsPerm;
-
   const st = s.settings;
-  $('#mod-key').textContent = mac ? MOD_LABEL[st.modifier] : MOD_LABEL[st.modifier].replace('Option', 'Alt').slice(2);
-  $('#shortcut').textContent = prettyShortcut(st.shortcut, mac);
-  $('#modifier').value = st.modifier;
+  const keyName = { shift: 'Shift', alt: mac ? 'Option' : 'Alt', ctrl: 'Control' }[st.modifier];
+  const needsPerm = !s.permission && s.hookSupported;
+  const status = $('#status');
+  let text;
+  if (needsPerm) { status.className = 'status warn'; text = 'Needs Accessibility access to detect drags'; }
+  else if (!s.hookSupported) { status.className = 'status warn'; text = `Use ${prettyShortcut(st.shortcut, mac)} on this system`; }
+  else if (!st.triggerEnabled) { status.className = 'status'; text = 'Drag trigger is off'; }
+  else if (s.hookRunning) { status.className = 'status ok'; text = `Ready. Hold ${keyName} and drag any file.`; }
+  else { status.className = 'status warn'; text = 'Starting…'; }
+  $('#status-text').textContent = text;
+  $('#grant').hidden = !needsPerm;
+
   $('#triggerEnabled').checked = st.triggerEnabled;
+  $('#modifier').value = st.modifier;
+  $('#modifier').disabled = !st.triggerEnabled;
+  if (!mac) $('#modifier option[value="alt"]').textContent = 'Alt';
+  $('#shortcut').textContent = prettyShortcut(st.shortcut, mac);
+  $('#output').value = st.outputMode;
+  $('#outdir').textContent = st.outputMode === 'folder' && st.outputDir ? st.outputDir : 'Originals are never overwritten';
   $('#openAtLogin').checked = st.openAtLogin;
-  document.querySelectorAll('[data-out]').forEach((b) => b.classList.toggle('on', b.dataset.out === st.outputMode));
-  $('#outdir').textContent = st.outputMode === 'folder' && st.outputDir ? st.outputDir : 'Next to the original file';
-  $('#version').textContent = `v${s.version} · ${s.actionCount} actions`;
-  if (!mac) document.querySelector('#modifier option[value="alt"]').textContent = 'Alt';
+  $('#footer').textContent = `Version ${s.version} · ${s.actionCount} actions · Everything stays on this ${mac ? 'Mac' : 'computer'}`;
 }
 
-const STATE_TEXT = { queued: 'Queued', running: '', done: 'Done', error: 'Failed' };
 function renderJobs(jobs) {
-  const ul = $('#jobs');
   if (!jobs.length) return;
-  ul.innerHTML = jobs.map((j) => `
-    <li class="job ${j.status}">
-      <div class="ic">${window.icon(j.category, 18)}</div>
-      <div style="min-width:0">
-        <div class="name">${esc(j.label)} · ${esc(j.files.length > 1 ? `${j.files.length} files` : j.files[0])}</div>
-        ${j.status === 'running' ? `<div class="bar"><i style="width:${Math.round(j.progress * 100)}%"></i></div>`
-          : `<div class="sub">${esc(j.status === 'error' ? j.error : j.outputs.map((o) => o.split(/[\\/]/).pop()).join(', '))}</div>`}
-      </div>
-      <div class="state">${j.status === 'done' ? `<button class="link" data-reveal="${esc(j.outputs[0])}">Show</button>`
-        : j.status === 'running' ? `${Math.round(j.progress * 100)}%` : STATE_TEXT[j.status]}</div>
-    </li>`).join('');
-}
-
-async function renderCatalog() {
-  const cats = await window.orbital.catalog();
-  const kindsLabel = { image: 'Images', video: 'Video', audio: 'Audio', pdf: 'PDF', doc: 'Docs', data: 'Data' };
-  $('#catalog').innerHTML = cats.map((c) => {
-    const kinds = [...new Set(c.items.flatMap((i) => i.kinds))].map((k) => kindsLabel[k]).join(', ');
-    const sample = [...new Set(c.items.map((i) => i.label))].slice(0, 7).join(' · ');
-    return `<div class="cat"><div class="ic">${window.icon(c.id === 'audio' ? 'audio' : c.id)}</div>
-      <div><b>${esc(c.label)} <span>(${c.items.length})</span></b><span>${esc(kinds)}<br>${esc(sample)}…</span></div></div>`;
+  $('#jobs').innerHTML = jobs.slice(0, 8).map((j) => {
+    const what = j.files.length > 1 ? `${j.files.length} files` : j.files[0];
+    let sub = '';
+    let trailing = '';
+    if (j.status === 'running') {
+      sub = `<div class="progress"><i style="width:${Math.round(j.progress * 100)}%"></i></div>`;
+      trailing = `${Math.round(j.progress * 100)}%`;
+    } else if (j.status === 'queued') {
+      sub = '<div class="row-sub">Waiting…</div>';
+    } else if (j.status === 'error') {
+      sub = `<div class="row-sub">${esc(j.error || 'Failed')}</div>`;
+    } else {
+      sub = `<div class="row-sub">${esc(j.outputs.map(basename).join(', '))}</div>`;
+      trailing = `<button class="btn link" data-reveal="${esc(j.outputs[0])}">Show in ${navigator.platform.startsWith('Mac') ? 'Finder' : 'folder'}</button>`;
+    }
+    return `<div class="row job ${j.status}">
+      <div class="glyph">${window.icon(j.status === 'error' ? 'file' : j.status === 'done' ? 'check' : j.category, 16)}</div>
+      <div class="row-text"><div class="name">${esc(j.label)} <span style="color:var(--secondary)">· ${esc(what)}</span></div>${sub}</div>
+      <div class="trailing">${trailing}</div>
+    </div>`;
   }).join('');
-  $('#count').textContent = `· ${cats.reduce((n, c) => n + c.items.length, 0)} actions`;
 }
 
 // ---------- events ----------
+const save = async (patch) => renderStatus(await window.orbital.saveSettings(patch));
 $('#grant').addEventListener('click', async () => renderStatus(await window.orbital.requestPermission()));
-$('#modifier').addEventListener('change', async (e) => renderStatus(await window.orbital.saveSettings({ modifier: e.target.value })));
-$('#triggerEnabled').addEventListener('change', async (e) => renderStatus(await window.orbital.saveSettings({ triggerEnabled: e.target.checked })));
-$('#openAtLogin').addEventListener('change', async (e) => renderStatus(await window.orbital.saveSettings({ openAtLogin: e.target.checked })));
-document.querySelectorAll('[data-out]').forEach((b) => b.addEventListener('click', async () => {
-  renderStatus(b.dataset.out === 'folder' ? await window.orbital.chooseFolder() : await window.orbital.saveSettings({ outputMode: 'same' }));
-}));
+$('#triggerEnabled').addEventListener('change', (e) => save({ triggerEnabled: e.target.checked }));
+$('#modifier').addEventListener('change', (e) => save({ modifier: e.target.value }));
+$('#openAtLogin').addEventListener('change', (e) => save({ openAtLogin: e.target.checked }));
+$('#output').addEventListener('change', async (e) => {
+  renderStatus(e.target.value === 'folder' ? await window.orbital.chooseFolder() : await window.orbital.saveSettings({ outputMode: 'same' }));
+});
 $('#jobs').addEventListener('click', (e) => {
   const p = e.target.closest('[data-reveal]')?.dataset.reveal;
   if (p) window.orbital.reveal(p);
 });
 
-const drop = $('#drop');
-['dragenter', 'dragover'].forEach((t) => document.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add('over'); }));
-['dragleave', 'drop'].forEach((t) => document.addEventListener(t, (e) => {
+let dragDepth = 0;
+document.addEventListener('dragenter', (e) => { e.preventDefault(); dragDepth++; document.body.classList.add('dragging'); });
+document.addEventListener('dragover', (e) => e.preventDefault());
+document.addEventListener('dragleave', () => { if (--dragDepth <= 0) { dragDepth = 0; document.body.classList.remove('dragging'); } });
+document.addEventListener('drop', (e) => {
   e.preventDefault();
-  if (t === 'drop' || !e.relatedTarget) drop.classList.remove('over');
-}));
-document.addEventListener('drop', (e) => window.orbital.drop(e.dataTransfer.files));
+  dragDepth = 0;
+  document.body.classList.remove('dragging');
+  window.orbital.drop(e.dataTransfer.files);
+});
 
 window.orbital.onJobs(renderJobs);
 window.orbital.onStatus(renderStatus);
@@ -90,6 +96,4 @@ window.orbital.onStatus(renderStatus);
 (async () => {
   renderStatus(await window.orbital.status());
   renderJobs(await window.orbital.jobs());
-  renderCatalog();
-  if (!status.settings.onboarded) window.orbital.saveSettings({ onboarded: true });
 })();
