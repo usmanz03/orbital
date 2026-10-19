@@ -191,7 +191,8 @@ function paintHub() {
   } else if (state.query) {
     thumbEl.innerHTML = '';
     hubTitle.innerHTML = `<span class="query">${esc(state.query)}</span><span class="caret"></span>`;
-    hubSub.textContent = currentItems().length ? `${currentItems().length} matches` : 'No matches';
+    const n = currentItems().length;
+    hubSub.textContent = n ? `${n} ${n === 1 ? 'match' : 'matches'}` : 'No matches';
   } else if (!state.menu.length) {
     thumbEl.innerHTML = window.icon('drop', 34);
     hubTitle.textContent = state.mode === 'drag' ? 'Drop to convert' : 'Drop files here';

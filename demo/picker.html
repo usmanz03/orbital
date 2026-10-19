@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Picker</title>
+  <link rel="stylesheet" href="../src/renderer/overlay.css">
+  <style>
+    .hint { display: none; }
+    body.show-hint .hint { display: block; }
+  </style>
+  <script>
+    // Stand-in for the preload bridge so the real overlay code can be driven by the video timeline.
+    const listeners = {};
+    window.orbital = {
+      onShow: (cb) => { listeners.show = cb; },
+      onHide: (cb) => { listeners.hide = cb; },
+      onInfo: (cb) => { listeners.info = cb; },
+      fileInfo: async () => null,
+      menuFor: async () => [],
+      run: () => {},
+      hide: () => {},
+      setMode: () => {},
+      pathsFor: () => [],
+    };
+    window.emitShow = (payload) => listeners.show(payload);
+    window.emitInfo = (info) => listeners.info(info);
+  </script>
+</head>
+<body>
+  <div id="stage" class="hidden">
+    <div id="cats"></div>
+    <div id="acts"></div>
+    <div id="hub" class="hub">
+      <div id="thumb" class="thumb"></div>
+      <div id="hub-title" class="hub-title"></div>
+      <div id="hub-sub" class="hub-sub"></div>
+    </div>
+    <div id="hint" class="hint"></div>
+  </div>
+  <script src="../src/renderer/icons.js"></script>
+  <script src="../src/renderer/overlay.js"></script>
+</body>
+</html>

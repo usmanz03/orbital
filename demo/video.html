@@ -1,0 +1,241 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Orbital demo</title>
+  <style>
+    :root {
+      --accent: #0a84ff;
+      --label: #f5f5f7;
+      --secondary: rgba(235, 235, 245, 0.62);
+      --tertiary: rgba(235, 235, 245, 0.32);
+      --glass: rgba(40, 40, 44, 0.86);
+      --hairline: rgba(255, 255, 255, 0.1);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; width: 1080px; height: 1350px; overflow: hidden;
+      background: #000; color: var(--label);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased; letter-spacing: -0.01em;
+    }
+    .layer { position: absolute; inset: 0; opacity: 0; }
+    .abs { position: absolute; }
+    .bg {
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(900px 700px at 50% 38%, rgba(10, 132, 255, 0.16), transparent 70%),
+        radial-gradient(700px 600px at 85% 95%, rgba(120, 80, 255, 0.12), transparent 70%),
+        #000;
+    }
+
+    /* ---------- captions ---------- */
+    .caption { position: absolute; left: 0; right: 0; top: 92px; text-align: center; padding: 0 60px; }
+    .eyebrow { font-size: 22px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+    .headline { font-size: 58px; line-height: 1.06; font-weight: 700; letter-spacing: -0.03em; margin-top: 14px; }
+    .sub { font-size: 27px; color: var(--secondary); margin-top: 14px; line-height: 1.3; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 18px; }
+    .chips span { font-size: 19px; font-weight: 500; padding: 6px 13px; border-radius: 999px; background: rgba(255,255,255,.08); border: 1px solid var(--hairline); color: #e5e5ea; }
+
+    /* ---------- hook ---------- */
+    #hook .icon { left: 50%; top: 360px; width: 260px; height: 260px; margin-left: -130px; filter: drop-shadow(0 30px 60px rgba(10, 132, 255, .35)); }
+    #hook .title { left: 0; right: 0; top: 660px; text-align: center; font-size: 120px; font-weight: 800; letter-spacing: -0.045em; }
+    #hook .tag { left: 0; right: 0; top: 810px; text-align: center; font-size: 46px; font-weight: 600; letter-spacing: -0.025em; }
+    #hook .tag2 { left: 0; right: 0; top: 880px; text-align: center; font-size: 30px; color: var(--secondary); }
+    kbd { font: 600 0.85em -apple-system, system-ui; padding: 2px 12px; border-radius: 10px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.14); border-bottom-width: 3px; }
+
+    /* ---------- desktop ---------- */
+    .screen { left: 40px; top: 330px; width: 1000px; height: 930px; border-radius: 26px; overflow: hidden; box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 40px 90px rgba(0,0,0,.6); }
+    .wallpaper { position: absolute; inset: 0; background-size: cover; background-position: 0% 50%; }
+    .menubar { position: absolute; left: 0; right: 0; top: 0; height: 34px; background: rgba(20,20,24,.55); display: flex; align-items: center; padding: 0 18px; gap: 22px; font-size: 15px; font-weight: 500; }
+    .menubar .right { margin-left: auto; display: flex; gap: 18px; align-items: center; }
+    .menubar img { width: 18px; height: 18px; filter: invert(1); }
+    .finder { left: 50px; top: 80px; width: 560px; height: 410px; border-radius: 16px; background: rgba(30,30,34,.88); box-shadow: 0 0 0 .5px rgba(255,255,255,.12), 0 24px 60px rgba(0,0,0,.5); overflow: hidden; }
+    .finder .bar { height: 52px; display: flex; align-items: center; gap: 8px; padding: 0 16px; border-bottom: 1px solid var(--hairline); }
+    .finder .bar i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+    .finder .bar b { margin-left: 14px; font-size: 16px; font-weight: 600; }
+    .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px 6px; padding: 22px 18px; }
+    .file { text-align: center; }
+    .file .ic { width: 96px; height: 80px; margin: 0 auto 8px; display: grid; place-items: center; border-radius: 8px; position: relative; }
+    .file .ic img { max-width: 96px; max-height: 80px; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,.4); display: block; }
+    .file .ic .badge { position: absolute; bottom: 4px; right: 6px; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: rgba(0,0,0,.7); }
+    .file .name { font-size: 13px; line-height: 1.25; color: #e5e5ea; padding: 2px 6px; border-radius: 5px; display: inline-block; max-width: 128px; }
+    .file.sel .ic { background: rgba(255,255,255,.12); }
+    .file.sel .name { background: var(--accent); color: #fff; }
+    .file .wave { width: 96px; height: 60px; border-radius: 6px; background: linear-gradient(135deg, #ff375f, #bf5af2); display: grid; place-items: center; }
+    .file .wave img { width: 80px; height: 30px; box-shadow: none; border-radius: 0; }
+    .ghost { width: 110px; border-radius: 6px; box-shadow: 0 16px 36px rgba(0,0,0,.55); opacity: 0; }
+    .cursor { width: 34px; height: 34px; z-index: 50; }
+    .keycap {
+      left: 790px; top: 1168px;
+      font-size: 30px; font-weight: 600; padding: 14px 34px; border-radius: 16px;
+      background: linear-gradient(#3a3a3e, #2a2a2e); border: 1px solid rgba(255,255,255,.14); border-bottom-width: 5px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.5); white-space: nowrap; z-index: 40;
+    }
+    .keycap.pressed { border-bottom-width: 2px; box-shadow: 0 0 0 3px rgba(10,132,255,.6), 0 0 40px rgba(10,132,255,.45); }
+    .deskstat { left: 0; right: 0; top: 1140px; margin: 0 auto; width: max-content; display: flex; align-items: baseline; gap: 16px; padding: 20px 34px; border-radius: 999px; background: rgba(28,28,32,.92); box-shadow: 0 0 0 1px var(--hairline), 0 24px 60px rgba(0,0,0,.6); font-size: 40px; font-weight: 700; letter-spacing: -0.02em; z-index: 45; opacity: 0; }
+    .deskstat .from { color: var(--secondary); text-decoration: line-through; text-decoration-thickness: 2px; }
+    .deskstat .arrow { color: var(--tertiary); }
+    .deskstat .to { color: #30d158; }
+    .deskstat .in { font-size: 26px; font-weight: 500; color: var(--secondary); }
+    .notif { width: 400px; padding: 16px 18px; border-radius: 20px; background: rgba(44,44,48,.92); box-shadow: 0 0 0 .5px rgba(255,255,255,.12), 0 20px 50px rgba(0,0,0,.5); display: flex; gap: 14px; align-items: center; z-index: 45; }
+    .notif img { width: 46px; height: 46px; }
+    .notif .t { font-size: 17px; font-weight: 600; }
+    .notif .b { font-size: 15px; color: var(--secondary); margin-top: 2px; }
+
+    /* ---------- picker ---------- */
+    #picker { position: absolute; left: 0; top: 0; width: 640px; height: 640px; border: 0; background: transparent; transform-origin: 0 0; z-index: 30; pointer-events: none; }
+
+    /* ---------- result card ---------- */
+    .result { left: 60px; right: 60px; top: 1092px; padding: 20px 26px; border-radius: 26px; background: rgba(28,28,32,.9); box-shadow: 0 0 0 1px var(--hairline), 0 30px 70px rgba(0,0,0,.5); display: flex; gap: 26px; align-items: center; }
+    .result .preview { flex: none; width: 150px; height: 150px; border-radius: 14px; overflow: hidden; display: grid; place-items: center; background: #111; position: relative; }
+    .result .preview img, .result .preview video { max-width: 100%; max-height: 100%; display: block; }
+    .result .preview .stack { position: absolute; width: 84px; border-radius: 4px; box-shadow: 0 8px 20px rgba(0,0,0,.5); }
+    .result .body { flex: 1; min-width: 0; }
+    .result .what { font-size: 18px; color: var(--secondary); }
+    .result .file { text-align: left; font-size: 24px; font-weight: 600; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bars { margin-top: 12px; display: grid; gap: 10px; }
+    .bar { display: grid; grid-template-columns: 76px 1fr 120px; align-items: center; gap: 12px; font-size: 17px; color: var(--secondary); }
+    .bar .track { height: 12px; border-radius: 6px; background: rgba(255,255,255,.06); overflow: hidden; }
+    .bar .fill { height: 100%; border-radius: 6px; background: rgba(255,255,255,.28); width: 0; }
+    .bar.after .fill { background: var(--accent); }
+    .bar .v { text-align: right; font-weight: 600; color: var(--label); font-variant-numeric: tabular-nums; }
+    .stat { margin-top: 10px; font-size: 20px; color: var(--secondary); }
+    .stat b { color: #30d158; font-weight: 600; }
+
+    /* ---------- keyboard ---------- */
+    .keys { left: 0; right: 0; top: 1060px; display: flex; justify-content: center; gap: 14px; }
+    .keys .k { min-width: 84px; height: 84px; padding: 0 22px; border-radius: 18px; display: grid; place-items: center; font-size: 34px; font-weight: 600; background: linear-gradient(#3a3a3e, #2a2a2e); border: 1px solid rgba(255,255,255,.14); border-bottom-width: 5px; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+    .keys .k.down { border-bottom-width: 2px; transform: translateY(3px); box-shadow: 0 0 0 3px rgba(10,132,255,.6), 0 0 40px rgba(10,132,255,.4); }
+
+    /* ---------- editors ---------- */
+    .shot { left: 40px; width: 1000px; border-radius: 22px; overflow: hidden; box-shadow: 0 0 0 1px rgba(255,255,255,.1), 0 40px 90px rgba(0,0,0,.6); }
+    .shot img { width: 100%; display: block; }
+
+    /* ---------- details ---------- */
+    .cards { left: 60px; right: 60px; top: 330px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .card { padding: 30px 28px; border-radius: 24px; background: rgba(28,28,32,.9); box-shadow: 0 0 0 1px var(--hairline); min-height: 230px; }
+    .card .ci { width: 52px; height: 52px; border-radius: 14px; display: grid; place-items: center; background: rgba(10,132,255,.16); color: var(--accent); margin-bottom: 18px; }
+    .card h3 { margin: 0; font-size: 28px; letter-spacing: -0.02em; }
+    .card p { margin: 8px 0 0; font-size: 20px; color: var(--secondary); line-height: 1.35; }
+
+    /* ---------- close ---------- */
+    #close .big { left: 0; right: 0; text-align: center; font-weight: 700; letter-spacing: -0.035em; }
+    .platforms { left: 0; right: 0; display: flex; justify-content: center; gap: 14px; }
+    .platforms span { font-size: 24px; font-weight: 600; padding: 12px 24px; border-radius: 999px; background: rgba(255,255,255,.08); border: 1px solid var(--hairline); }
+    .url { left: 0; right: 0; text-align: center; font-size: 30px; font-weight: 600; color: var(--accent); }
+    .brand { left: 50px; bottom: 44px; display: flex; align-items: center; gap: 12px; font-size: 22px; font-weight: 700; z-index: 60; opacity: 0; }
+    .brand img { width: 40px; height: 40px; }
+  </style>
+</head>
+<body>
+  <div class="bg"></div>
+
+  <!-- 1. Hook -->
+  <section id="hook" class="layer">
+    <img class="abs icon" src="out/media/app-icon-512.png" alt="">
+    <div class="abs title">Orbital</div>
+    <div class="abs tag">Convert any file in one move.</div>
+    <div class="abs tag2">Hold <kbd>⇧ Shift</kbd> · drag · drop</div>
+  </section>
+
+  <!-- 2. Desktop demo -->
+  <section id="desk" class="layer">
+    <div class="caption">
+      <div class="eyebrow">How it works</div>
+      <div class="headline" id="desk-head"></div>
+    </div>
+    <div class="abs screen" id="screen">
+      <div class="wallpaper" style="background-image:url(out/media/earthset.jpg)"></div>
+      <div class="menubar"><span style="font-weight:700">Finder</span><span>File</span><span>Edit</span><span>View</span><span>Go</span>
+        <div class="right"><img src="../assets/trayTemplate@2x.png" alt=""><span>Mon 9:41</span></div></div>
+      <div class="abs finder">
+        <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><b>Downloads</b></div>
+        <div class="grid" id="grid"></div>
+      </div>
+      <img class="abs ghost" id="ghost" src="out/media/blue-marble.jpg" alt="">
+      <div class="abs notif" id="notif" style="left:560px;top:52px;opacity:0">
+        <img src="out/media/app-icon.png" alt="">
+        <div><div class="t">Resize: done</div><div class="b">Blue Marble-1920px.jpg</div></div>
+      </div>
+    </div>
+    <div class="abs keycap" id="shiftkey">⇧ shift</div>
+    <div class="abs deskstat" id="deskstat"><span class="from">11.6 MB</span><span class="arrow">→</span><span class="to">638 KB</span><span class="in">in 0.8 s</span></div>
+  </section>
+
+  <!-- 3. File types -->
+  <section id="types" class="layer">
+    <div class="caption">
+      <div class="eyebrow" id="ty-eyebrow"></div>
+      <div class="headline" id="ty-head"></div>
+      <div class="chips" id="ty-chips"></div>
+    </div>
+    <div class="abs result" id="ty-result">
+      <div class="preview" id="ty-preview"></div>
+      <div class="body">
+        <div class="what" id="ty-what"></div>
+        <div class="file" id="ty-file"></div>
+        <div class="bars">
+          <div class="bar before"><span>Before</span><div class="track"><div class="fill" id="ty-b1"></div></div><span class="v" id="ty-v1"></span></div>
+          <div class="bar after"><span>After</span><div class="track"><div class="fill" id="ty-b2"></div></div><span class="v" id="ty-v2"></span></div>
+        </div>
+        <div class="stat" id="ty-stat"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Keyboard -->
+  <section id="keys" class="layer">
+    <div class="caption">
+      <div class="eyebrow">Keyboard</div>
+      <div class="headline">Select. Press. Type.</div>
+      <div class="sub">Pick files in Finder, hit <b style="color:var(--label)">⌘ ⇧ Space</b>, type what you want.</div>
+    </div>
+    <div class="abs keys" id="keyrow"></div>
+    <div class="abs notif" id="keynotif" style="left:340px;top:640px;opacity:0">
+      <img src="out/media/app-icon.png" alt="">
+      <div><div class="t">MP3: done in 2.5 s</div><div class="b">Artemis I Launch.mp3 · 74.7 MB → 4.6 MB</div></div>
+    </div>
+  </section>
+
+  <!-- 5. Editors -->
+  <section id="editors" class="layer">
+    <div class="caption">
+      <div class="eyebrow">Built-in editors</div>
+      <div class="headline" id="ed-head">Trim video. Crop photos.</div>
+      <div class="sub" id="ed-sub"></div>
+    </div>
+    <div class="abs shot" id="shot-trim" style="top:380px"><img src="out/media/editor-trim.png" alt=""></div>
+    <div class="abs shot" id="shot-crop" style="top:360px"><img src="out/media/editor-crop.png" alt=""></div>
+  </section>
+
+  <!-- 6. Details -->
+  <section id="details" class="layer">
+    <div class="caption">
+      <div class="eyebrow">The details</div>
+      <div class="headline">Built for real-world files.</div>
+    </div>
+    <div class="abs cards" id="cards"></div>
+  </section>
+
+  <!-- 7. Close -->
+  <section id="close" class="layer">
+    <div class="abs big" id="cl-1" style="top:250px;font-size:72px">100% on your computer.</div>
+    <div class="abs big" id="cl-2" style="top:345px;font-size:34px;font-weight:500;color:var(--secondary);letter-spacing:-0.01em">No uploads. No account. Works offline.</div>
+    <div class="abs platforms" id="cl-3" style="top:450px"><span>macOS</span><span>Windows</span><span>Linux</span></div>
+    <img class="abs" id="cl-icon" src="out/media/app-icon-512.png" style="left:50%;top:640px;width:200px;margin-left:-100px;filter:drop-shadow(0 24px 50px rgba(10,132,255,.35))" alt="">
+    <div class="abs big" id="cl-4" style="top:870px;font-size:96px">Orbital</div>
+    <div class="abs big" id="cl-5" style="top:990px;font-size:32px;font-weight:500;color:var(--secondary);letter-spacing:-0.01em">Free · Open source · 135 actions</div>
+    <div class="abs url" id="cl-6" style="top:1080px">github.com/usmanz03/orbital</div>
+    <div class="abs big" id="cl-7" style="top:1140px;font-size:24px;font-weight:500;color:var(--tertiary);letter-spacing:0">Link in the comments</div>
+    <div class="abs big" id="cl-8" style="top:1286px;font-size:17px;font-weight:400;color:var(--tertiary);letter-spacing:0">Sample files: NASA (public domain). Every conversion shown ran in Orbital.</div>
+  </section>
+
+  <iframe id="picker" src="picker.html"></iframe>
+  <img class="abs cursor" id="cursor" src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M6 3v22.5l6.2-5.6 4 9.3 4-1.7-4-9.2H24z' fill='%23000' stroke='%23fff' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E" style="opacity:0" alt="">
+  <div class="abs brand" id="brand"><img src="out/media/app-icon.png" alt="">Orbital</div>
+
+  <script src="../src/renderer/icons.js"></script>
+  <script src="video.js"></script>
+</body>
+</html>
