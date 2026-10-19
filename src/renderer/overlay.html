@@ -2,17 +2,20 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
   <title>Orbital</title>
   <link rel="stylesheet" href="overlay.css">
 </head>
 <body>
   <div id="stage" class="hidden">
-    <svg id="ring" viewBox="0 0 640 640" width="640" height="640" aria-label="Orbital menu"></svg>
-    <div id="hub">
-      <div id="hub-title">Drop here</div>
-      <div id="hub-sub"></div>
+    <div id="cats"></div>
+    <div id="acts"></div>
+    <div id="hub" class="hub">
+      <div id="thumb" class="thumb"></div>
+      <div id="hub-title" class="hub-title"></div>
+      <div id="hub-sub" class="hub-sub"></div>
     </div>
+    <div id="hint" class="hint"></div>
   </div>
   <script src="icons.js"></script>
   <script src="overlay.js"></script>

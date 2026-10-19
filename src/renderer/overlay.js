@@ -1,38 +1,90 @@
-// Radial menu. Geometry is polar around the window centre: angle 0 = 12 o'clock, clockwise.
+// Radial picker. Polar geometry around the window centre: angle 0 = 12 o'clock, clockwise.
+// Visuals are floating HTML elements; hit-testing stays angular so targets are generous.
 const C = 320;
-const R_HUB = 58;
-const R_CAT = [66, 150];
-const R_ACT = [158, 296];
-const MAX_FAN_SEG = 34;
+const R_HUB = 68;
+const R_CAT = [80, 152];
+const CAT_R = 116;
+const R_ACT = [160, 272]; // outer pie ring
+const ACT_R = 216;
+const MAX_FAN_SEG = 28;
 const MAX_SEARCH = 12;
 
-const svg = document.getElementById('ring');
-const stage = document.getElementById('stage');
-const hub = document.getElementById('hub');
-const hubTitle = document.getElementById('hub-title');
-const hubSub = document.getElementById('hub-sub');
+const $ = (id) => document.getElementById(id);
+const stage = $('stage');
+const catsEl = $('cats');
+const actsEl = $('acts');
+const hub = $('hub');
+const thumbEl = $('thumb');
+const hubTitle = $('hub-title');
+const hubSub = $('hub-sub');
+const hintEl = $('hint');
 
 const state = {
   mode: null, // drag | menu | hub
   files: [],
+  info: null,
   menu: [],
   cat: 0,
   hover: -1,
   query: '',
-  menuFromKinds: false,
   revealed: false,
-  loading: null,
+  message: null,
 };
-let lastFan = null;
+let builtCats = null;
+let builtFan = null;
 
 // ---------- geometry ----------
 const rad = (deg) => (deg * Math.PI) / 180;
 const pt = (r, deg) => [C + r * Math.sin(rad(deg)), C - r * Math.cos(rad(deg))];
 const norm = (deg) => ((deg % 360) + 360) % 360;
+const catSpan = () => 360 / Math.max(1, state.menu.length);
+const catCenter = (i) => i * catSpan();
+
+function searchResults() {
+  const words = state.query.toLowerCase().split(/\s+/).filter(Boolean);
+  const out = [];
+  for (const cat of state.menu) {
+    for (const item of cat.items) {
+      const hay = `${item.label} ${cat.label} ${item.hint || ''}`.toLowerCase();
+      if (words.every((w) => hay.includes(w))) out.push({ ...item, hint: cat.label });
+    }
+  }
+  return out.slice(0, MAX_SEARCH);
+}
+
+const currentItems = () => (state.query ? searchResults() : state.menu[state.cat]?.items || []);
+
+function fan() {
+  const items = currentItems();
+  const seg = Math.min(MAX_FAN_SEG, 360 / Math.max(1, items.length));
+  const center = state.query ? 0 : catCenter(state.cat);
+  return { items, seg, start: center - (seg * items.length) / 2 };
+}
+
+function hit(x, y) {
+  const dx = x - C; const dy = y - C;
+  const r = Math.hypot(dx, dy);
+  const a = norm((Math.atan2(dx, -dy) * 180) / Math.PI);
+  if (r <= (state.menu.length ? R_HUB : 96)) return { type: 'hub' };
+  if (!state.menu.length) return null;
+  if (r >= R_CAT[0] && r <= R_CAT[1] && !state.query) {
+    return { type: 'cat', index: Math.floor(norm(a + catSpan() / 2) / catSpan()) % state.menu.length };
+  }
+  if (r > R_CAT[1] && r <= R_ACT[1] + 14) {
+    const { items, seg, start } = fan();
+    const i = Math.floor(norm(a - start) / seg);
+    if (i >= 0 && i < items.length) return { type: 'act', index: i };
+  }
+  return null;
+}
+
+// ---------- rendering ----------
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const place = (el, r, a) => { const [x, y] = pt(r, a); el.style.left = `${x}px`; el.style.top = `${y}px`; };
 
 function sector(r1, r2, a0, a1) {
   if (a1 - a0 >= 359.9) {
-    // Full ring: two half arcs each way.
+    // Full ring: outer circle clockwise, inner circle counter-clockwise.
     const [ox, oy] = pt(r2, 0); const [ox2, oy2] = pt(r2, 180);
     const [ix, iy] = pt(r1, 0); const [ix2, iy2] = pt(r1, 180);
     return `M${ox},${oy}A${r2},${r2} 0 1 1 ${ox2},${oy2}A${r2},${r2} 0 1 1 ${ox},${oy}Z`
@@ -44,127 +96,119 @@ function sector(r1, r2, a0, a1) {
   return `M${x1},${y1}A${r2},${r2} 0 ${large} 1 ${x2},${y2}L${x3},${y3}A${r1},${r1} 0 ${large} 0 ${x4},${y4}Z`;
 }
 
-const catSpan = () => 360 / Math.max(1, state.menu.length);
-const catCenter = (i) => i * catSpan();
-
-function currentItems() {
-  if (state.query) return searchResults();
-  return state.menu[state.cat]?.items || [];
+function buildCats() {
+  const key = state.menu.map((c) => c.id).join(',');
+  if (key === builtCats) return;
+  builtCats = key;
+  catsEl.innerHTML = '';
+  if (!state.menu.length) return;
+  const [r1, r2] = R_CAT;
+  const span = catSpan();
+  const n = state.menu.length;
+  const wedges = state.menu.map((_, i) =>
+    `<path class="wedge" d="${sector(r1, r2, catCenter(i) - span / 2, catCenter(i) + span / 2)}"/>`).join('');
+  const lines = n > 1 ? state.menu.map((_, i) => {
+    const a = catCenter(i) - span / 2;
+    const [x1, y1] = pt(r1 + 8, a); const [x2, y2] = pt(r2 - 8, a);
+    return `<line class="divider" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+  }).join('') : '';
+  catsEl.innerHTML = `<svg class="pie ring" viewBox="0 0 640 640" width="640" height="640">
+      <path class="pie-base" d="${sector(r1, r2, 0, 360)}"/>${wedges}${lines}
+      <path class="pie-edge" d="${sector(r1, r2, 0, 360)}"/>
+    </svg>`;
+  state.menu.forEach((cat, i) => {
+    const el = document.createElement('div');
+    el.className = 'cat orb enter';
+    el.style.animationDelay = `${30 + i * 18}ms`;
+    el.innerHTML = `<div class="chip">${window.icon(cat.icon, 19)}</div><div class="name">${esc(cat.label)}</div>`;
+    place(el, CAT_R, catCenter(i));
+    catsEl.appendChild(el);
+  });
 }
 
-function fan() {
-  const items = currentItems();
-  const n = items.length;
-  const seg = Math.min(MAX_FAN_SEG, 360 / Math.max(1, n));
-  const center = state.query ? 0 : catCenter(state.cat);
-  const start = center - (seg * n) / 2;
-  return { items, seg, start, full: seg * n >= 359.9 };
+// Actions form one continuous glass arc split by hairlines, like a pie ring.
+function buildFan() {
+  const { items, seg, start } = fan();
+  const key = `${state.query ? `q:${state.query}` : `c:${state.cat}`}|${items.map((i) => i.id).join(',')}`;
+  if (key === builtFan) return;
+  builtFan = key;
+  actsEl.innerHTML = '';
+  actsEl.classList.remove('enter');
+  if (!items.length) return;
+  const [r1, r2] = R_ACT;
+  const end = start + seg * items.length;
+  const center = (start + end) / 2;
+  actsEl.style.setProperty('--ox', `${pt(1, center)[0] - C}`);
+  actsEl.style.setProperty('--oy', `${pt(1, center)[1] - C}`);
+
+  const paths = items.map((_, i) =>
+    `<path class="wedge" data-i="${i}" d="${sector(r1, r2, start + seg * i, start + seg * (i + 1))}"/>`).join('');
+  // Hairline dividers between wedges (none on a full ring's seam).
+  const lines = items.slice(1).map((_, i) => {
+    const a = start + seg * (i + 1);
+    const [x1, y1] = pt(r1 + 10, a); const [x2, y2] = pt(r2 - 10, a);
+    return `<line class="divider" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+  }).join('');
+  actsEl.innerHTML = `<svg class="pie" viewBox="0 0 640 640" width="640" height="640">
+      <path class="pie-base" d="${sector(r1, r2, start, end)}"/>${paths}${lines}
+      <path class="pie-edge" d="${sector(r1, r2, start, end)}"/>
+    </svg>`;
+  items.forEach((item, i) => {
+    const el = document.createElement('div');
+    el.className = 'act orb';
+    el.innerHTML = `<span class="label">${esc(item.label)}</span>${item.hint ? `<span class="sub">${esc(item.hint)}</span>` : ''}`;
+    el.style.maxWidth = `${Math.max(56, Math.min(120, rad(seg) * ACT_R - 10))}px`;
+    place(el, ACT_R, start + seg * (i + 0.5));
+    actsEl.appendChild(el);
+  });
+  void actsEl.offsetWidth; // restart the unfold animation
+  actsEl.classList.add('enter');
 }
 
-function searchResults() {
-  const q = state.query.toLowerCase();
-  const out = [];
-  for (const cat of state.menu) {
-    for (const item of cat.items) {
-      const hay = `${item.label} ${cat.label} ${item.hint || ''}`.toLowerCase();
-      if (q.split(/\s+/).every((w) => hay.includes(w))) out.push({ ...item, hint: item.hint || cat.label });
-    }
-  }
-  return out.slice(0, MAX_SEARCH);
-}
-
-function hit(x, y) {
-  const dx = x - C; const dy = y - C;
-  const r = Math.hypot(dx, dy);
-  const a = norm((Math.atan2(dx, -dy) * 180) / Math.PI);
-  if (r <= (state.menu.length ? R_HUB : 110)) return { type: 'hub' };
-  if (!state.menu.length) return null;
-  if (r >= R_CAT[0] && r <= R_CAT[1] && !state.query) {
-    return { type: 'cat', index: Math.floor(norm(a + catSpan() / 2) / catSpan()) % state.menu.length };
-  }
-  if (r >= R_ACT[0] - 4 && r <= R_ACT[1] + 10) {
-    const { items, seg, start } = fan();
-    const rel = norm(a - start);
-    const i = Math.floor(rel / seg);
-    if (i >= 0 && i < items.length) return { type: 'act', index: i };
-  }
-  return null;
-}
-
-// ---------- rendering ----------
-const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
-
-function wrapLabel(label, max = 13) {
-  if (label.length <= max || !label.includes(' ')) return [label];
-  const words = label.split(' ');
-  let best = [label];
-  for (let i = 1; i < words.length; i++) {
-    const a = words.slice(0, i).join(' '); const b = words.slice(i).join(' ');
-    if (Math.max(a.length, b.length) < Math.max(...best.map((s) => s.length))) best = [a, b];
-  }
-  return best;
-}
-
-function render() {
-  const parts = [`<defs><linearGradient id="accentGrad" x1="0" y1="0" x2="1" y2="1">
-    <stop offset="0" stop-color="#7c5cff"/><stop offset="1" stop-color="#3dd6f5"/></linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="8" stdDeviation="14" flood-opacity=".45"/></filter></defs>`];
-
-  if (state.menu.length) {
-    const span = catSpan();
-    const gap = state.menu.length > 1 ? 1.2 : 0;
-    parts.push('<g filter="url(#shadow)">');
-    if (!state.query) {
-      state.menu.forEach((cat, i) => {
-        const a = catCenter(i);
-        const [lx, ly] = pt((R_CAT[0] + R_CAT[1]) / 2, a);
-        parts.push(`<g class="cat${i === state.cat ? ' active' : ''}">
-          <path class="seg" d="${sector(R_CAT[0], R_CAT[1], a - span / 2 + gap, a + span / 2 - gap)}"/>
-          <svg class="ico" x="${lx - 10}" y="${ly - 18}" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${window.ICONS[cat.icon] || ''}</svg>
-          <text class="label" x="${lx}" y="${ly + 15}" text-anchor="middle">${esc(cat.label)}</text></g>`);
-      });
-    }
-    const { items, seg, start } = fan();
-    // Only animate when the fan's contents change, not on every hover re-render.
-    const fanKey = state.query ? `q:${state.query}` : `c:${state.cat}:${state.menu.length}`;
-    const enter = fanKey !== lastFan ? ' enter' : '';
-    lastFan = fanKey;
-    items.forEach((item, i) => {
-      const a0 = start + i * seg; const a1 = a0 + seg;
-      const mid = (a0 + a1) / 2;
-      const lines = wrapLabel(item.label);
-      const [lx, ly] = pt((R_ACT[0] + R_ACT[1]) / 2 + 4, mid);
-      const lineH = 13;
-      const top = ly - ((lines.length - 1) * lineH) / 2 - (item.hint ? 5 : 0);
-      parts.push(`<g class="act${i === state.hover ? ' hover' : ''}${enter}" style="animation-delay:${i * 12}ms">
-        <path class="seg" d="${sector(R_ACT[0], R_ACT[1], a0 + 0.8, a1 - 0.8)}"/>
-        ${lines.map((l, k) => `<text class="label" x="${lx}" y="${top + k * lineH + 4}" text-anchor="middle">${esc(l)}</text>`).join('')}
-        ${item.hint ? `<text class="hint" x="${lx}" y="${top + lines.length * lineH + 3}" text-anchor="middle">${esc(item.hint)}</text>` : ''}
-      </g>`);
-    });
-    parts.push('</g>');
-  }
-  svg.innerHTML = parts.join('');
-  renderHub();
-}
-
-function renderHub() {
-  const n = state.files.length;
-  const name = n === 1 ? state.files[0].split(/[\\/]/).pop() : n > 1 ? `${n} files` : '';
+function paint() {
   document.body.classList.toggle('hub-mode', !state.menu.length);
-  if (state.loading) {
-    hubTitle.textContent = state.loading;
+  document.body.classList.toggle('searching', !!state.query);
+  buildCats();
+  buildFan();
+  catsEl.querySelectorAll('.cat').forEach((el, i) => el.classList.toggle('active', i === state.cat && !state.query));
+  catsEl.querySelectorAll('.wedge').forEach((el, i) => el.classList.toggle('hover', i === state.cat && !state.query));
+  actsEl.querySelectorAll('.act').forEach((el, i) => el.classList.toggle('hover', i === state.hover));
+  actsEl.querySelectorAll('.wedge').forEach((el, i) => el.classList.toggle('hover', i === state.hover));
+  paintHub();
+}
+
+function paintHub() {
+  const item = currentItems()[state.hover];
+  const info = state.info;
+  const thumb = info?.thumb ? `<img src="${info.thumb}" alt="">` : '';
+
+  if (state.message) {
+    thumbEl.innerHTML = window.icon('drop', 30);
+    hubTitle.textContent = state.message;
     hubSub.textContent = '';
   } else if (state.query) {
-    hubTitle.innerHTML = `<span class="q">${esc(state.query)}</span>`;
-    hubSub.textContent = currentItems().length ? '↵ to run' : 'No match';
+    thumbEl.innerHTML = '';
+    hubTitle.innerHTML = `<span class="query">${esc(state.query)}</span><span class="caret"></span>`;
+    hubSub.textContent = currentItems().length ? `${currentItems().length} matches` : 'No matches';
   } else if (!state.menu.length) {
-    hubTitle.textContent = state.mode === 'drag' ? 'Drop here' : 'Drop files here';
-    hubSub.textContent = state.mode === 'drag' ? 'to see options' : 'Esc to close';
+    thumbEl.innerHTML = window.icon('drop', 34);
+    hubTitle.textContent = state.mode === 'drag' ? 'Drop to convert' : 'Drop files here';
+    hubSub.textContent = state.mode === 'drag' ? '' : 'Press Esc to close';
   } else {
-    const item = currentItems()[state.hover];
-    hubTitle.textContent = item ? item.label : name || 'Orbital';
-    hubSub.textContent = item ? (n > 1 ? `${n} files` : name) : state.mode === 'menu' ? 'Type to search' : 'Release to run';
+    if (thumbEl.dataset.src !== (info?.thumb || '')) {
+      thumbEl.innerHTML = thumb || window.icon('file', 30);
+      thumbEl.dataset.src = info?.thumb || '';
+    }
+    hubTitle.textContent = item ? item.label : info?.name || (state.files.length > 1 ? `${state.files.length} files` : 'Orbital');
+    hubSub.textContent = item ? (item.hint || state.menu[state.cat]?.label || '') : info?.detail || (state.mode === 'drag' ? 'Release on an action' : '');
+  }
+
+  const showHint = state.mode === 'menu' && state.menu.length && !state.message;
+  hintEl.classList.toggle('show', !!showHint);
+  if (showHint) {
+    hintEl.innerHTML = state.query
+      ? '<kbd>↵</kbd> convert &nbsp;·&nbsp; <kbd>esc</kbd> clear'
+      : 'Type to search &nbsp;·&nbsp; <kbd>←</kbd><kbd>→</kbd> category &nbsp;·&nbsp; <kbd>↵</kbd> convert';
   }
 }
 
@@ -175,11 +219,15 @@ function reveal() {
 }
 
 function reset() {
-  Object.assign(state, { mode: null, files: [], menu: [], cat: 0, hover: -1, query: '', menuFromKinds: false, revealed: false, loading: null });
+  Object.assign(state, { mode: null, files: [], info: null, menu: [], cat: 0, hover: -1, query: '', revealed: false, message: null });
   stage.classList.add('hidden');
   document.body.classList.remove('drag-mode');
-  svg.innerHTML = '';
-  lastFan = null;
+  catsEl.innerHTML = '';
+  actsEl.innerHTML = '';
+  thumbEl.innerHTML = '';
+  delete thumbEl.dataset.src;
+  builtCats = null;
+  builtFan = null;
 }
 
 function close() {
@@ -196,12 +244,12 @@ function runItem(item) {
 // ---------- pointer ----------
 function track(x, y) {
   const h = hit(x, y);
-  let dirty = false;
-  if (h?.type === 'cat' && h.index !== state.cat) { state.cat = h.index; state.hover = -1; dirty = true; }
+  let changed = false;
+  if (h?.type === 'cat' && h.index !== state.cat) { state.cat = h.index; state.hover = -1; changed = true; }
   const hover = h?.type === 'act' ? h.index : -1;
-  if (hover !== state.hover) { state.hover = hover; dirty = true; }
-  hub.classList.toggle('drop-target', h?.type === 'hub');
-  if (dirty) render();
+  if (hover !== state.hover) { state.hover = hover; changed = true; }
+  hub.classList.toggle('drop-target', h?.type === 'hub' && state.mode === 'drag');
+  if (changed) paint();
   return h;
 }
 
@@ -211,7 +259,7 @@ document.addEventListener('mousedown', (e) => {
   const h = hit(e.clientX, e.clientY);
   if (!h) return close();
   if (h.type === 'act') runItem(currentItems()[h.index]);
-  else if (h.type === 'cat') { state.cat = h.index; state.hover = -1; render(); }
+  else if (h.type === 'cat') { state.cat = h.index; state.hover = -1; state.query = ''; paint(); }
 });
 
 // ---------- drag & drop ----------
@@ -221,19 +269,18 @@ const MIME_KIND = [
   [/(csv|json|tab-separated)/, 'data'],
 ];
 const kindForMime = (mime) => (MIME_KIND.find(([re]) => re.test(mime)) || [, 'unknown'])[1];
+let kindsRequested = false;
 
 async function onDragEnter(e) {
   if (!e.dataTransfer || !Array.from(e.dataTransfer.types).includes('Files')) return;
-  if (state.revealed) return;
   reveal();
-  if (state.mode !== 'drag') return;
+  if (state.mode !== 'drag' || kindsRequested) return;
+  kindsRequested = true;
   // During a drag Chromium exposes MIME types but not paths; use them to pre-build the menu.
   const kinds = Array.from(e.dataTransfer.items).filter((i) => i.kind === 'file').map((i) => kindForMime(i.type));
-  render();
   if (kinds.length && !kinds.includes('unknown')) {
     state.menu = await window.orbital.menuFor({ kinds });
-    state.menuFromKinds = true;
-    render();
+    paint();
   }
 }
 
@@ -241,7 +288,7 @@ document.addEventListener('dragenter', (e) => { e.preventDefault(); onDragEnter(
 document.addEventListener('dragover', (e) => {
   e.preventDefault();
   if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
-  if (!state.revealed) onDragEnter(e);
+  onDragEnter(e);
   track(e.clientX, e.clientY);
 });
 document.addEventListener('drop', async (e) => {
@@ -255,14 +302,14 @@ document.addEventListener('drop', async (e) => {
   const menu = await window.orbital.menuFor({ files });
   if (!menu.length) {
     state.menu = [];
-    state.loading = 'Unsupported file';
-    renderHub();
-    setTimeout(close, 1100);
+    state.message = 'Not supported yet';
+    paint();
+    setTimeout(close, 1200);
     return;
   }
   // Dropped straight onto an action that's valid for these exact files: run it.
   if (picked && menu.some((c) => c.items.some((i) => i.id === picked.id))) return runItem(picked);
-  // Otherwise stay open as a clickable menu.
+  // Otherwise stay open so the user can choose.
   const prevCat = state.menu[state.cat]?.id;
   state.menu = menu;
   state.cat = Math.max(0, menu.findIndex((c) => c.id === prevCat));
@@ -270,48 +317,64 @@ document.addEventListener('drop', async (e) => {
   state.mode = 'menu';
   document.body.classList.remove('drag-mode');
   window.orbital.setMode('menu');
-  reveal();
-  render();
+  paint();
+  state.info = await window.orbital.fileInfo(files);
+  paint();
 });
 
 // ---------- keyboard ----------
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
-    if (state.query) { state.query = ''; state.hover = -1; render(); } else close();
+    if (state.query) { state.query = ''; state.hover = -1; paint(); } else close();
     return;
   }
   if (state.mode !== 'menu') return;
   const items = currentItems();
   if (e.key === 'Enter') return runItem(items[Math.max(0, state.hover)]);
-  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-    if (state.query) { state.hover = (state.hover + (e.key === 'ArrowRight' ? 1 : items.length - 1)) % items.length; }
-    else { state.cat = (state.cat + (e.key === 'ArrowRight' ? 1 : state.menu.length - 1)) % state.menu.length; state.hover = -1; }
-    return render();
+  if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && !state.query) {
+    const step = e.key === 'ArrowRight' ? 1 : state.menu.length - 1;
+    state.cat = (state.cat + step) % state.menu.length;
+    state.hover = -1;
+    return paint();
   }
-  if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Tab') {
+  if (['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft', 'Tab'].includes(e.key)) {
     e.preventDefault();
-    const step = e.key === 'ArrowUp' || (e.key === 'Tab' && e.shiftKey) ? -1 : 1;
-    state.hover = (state.hover + step + items.length) % items.length;
-    return render();
+    if (!items.length) return;
+    const back = e.key === 'ArrowUp' || e.key === 'ArrowLeft' || (e.key === 'Tab' && e.shiftKey);
+    state.hover = (state.hover + (back ? -1 : 1) + items.length) % items.length;
+    return paint();
   }
-  if (e.key === 'Backspace') { state.query = state.query.slice(0, -1); state.hover = state.query ? 0 : -1; return render(); }
-  if (e.key.length === 1 && !e.metaKey && !e.ctrlKey) {
+  if (e.key === 'Backspace') {
+    state.query = state.query.slice(0, -1);
+    state.hover = state.query ? 0 : -1;
+    return paint();
+  }
+  if (e.key.length === 1 && !e.metaKey && !e.ctrlKey && (state.query || e.key !== ' ')) {
     state.query += e.key;
     state.hover = 0;
-    render();
+    paint();
   }
 });
 
 // ---------- lifecycle ----------
-window.orbital.onShow(({ mode, files, menu }) => {
+function applyTheme(theme) {
+  if (!theme?.accent) return;
+  document.documentElement.style.setProperty('--accent', theme.accent);
+  // Light accents (e.g. yellow) need dark text on top.
+  const n = parseInt(theme.accent.slice(1), 16);
+  const lum = (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+  document.documentElement.style.setProperty('--accent-ink', lum > 0.7 ? '#1d1d1f' : '#ffffff');
+}
+
+window.orbital.onShow(({ mode, files, menu, theme }) => {
   reset();
-  state.mode = mode;
-  state.files = files;
-  state.menu = menu;
+  kindsRequested = false;
+  applyTheme(theme);
+  Object.assign(state, { mode, files, menu });
   document.body.classList.toggle('drag-mode', mode === 'drag');
-  render();
-  // Show immediately: macOS passes drags straight through fully transparent windows,
-  // so an invisible picker would never receive the file.
+  paint();
+  // Show immediately: macOS passes drags straight through fully transparent windows.
   reveal();
 });
+window.orbital.onInfo((info) => { state.info = info; paint(); });
 window.orbital.onHide(reset);

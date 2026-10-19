@@ -1,7 +1,8 @@
 const path = require('path');
 const { pathToFileURL } = require('url');
+const fs = require('fs');
 const {
-  app, BrowserWindow, Tray, Menu, ipcMain, screen, globalShortcut, nativeImage, shell, dialog,
+  app, BrowserWindow, Tray, Menu, ipcMain, screen, globalShortcut, nativeImage, shell, dialog, systemPreferences, nativeTheme,
 } = require('electron');
 const settings = require('./settings');
 const trigger = require('./trigger');
@@ -72,7 +73,8 @@ function showOverlay(mode, files = []) {
   clearTimeout(dragEndTimer);
   overlayMode = mode;
   placeOverlay();
-  overlay.webContents.send('overlay:show', { mode, files, menu: files.length ? catalog.menuFor(files) : [] });
+  overlay.webContents.send('overlay:show', { mode, files, menu: files.length ? catalog.menuFor(files) : [], theme: theme() });
+  if (files.length) fileInfo(files).then((info) => overlay.webContents.send('overlay:info', info));
   if (mode === 'drag') {
     overlay.showInactive();
   } else {
@@ -80,6 +82,36 @@ function showOverlay(mode, files = []) {
     overlay.focus();
     if (isMac) app.focus({ steal: true });
   }
+}
+
+// The user's system accent colour, so the picker feels native.
+function theme() {
+  let accent = null;
+  try { accent = systemPreferences.getAccentColor?.(); } catch { /* Linux */ }
+  return { accent: accent ? `#${accent.slice(0, 6)}` : null, dark: nativeTheme.shouldUseDarkColors };
+}
+
+const formatBytes = (n) => (n < 1e3 ? `${n} B` : n < 1e6 ? `${(n / 1e3).toFixed(0)} KB` : n < 1e9 ? `${(n / 1e6).toFixed(1)} MB` : `${(n / 1e9).toFixed(2)} GB`);
+
+// Thumbnail + one-line description for the picker's centre.
+async function fileInfo(files) {
+  const first = files[0];
+  let thumb = null;
+  try {
+    thumb = (await nativeImage.createThumbnailFromPath(first, { width: 160, height: 160 })).toDataURL();
+  } catch {
+    try { thumb = (await app.getFileIcon(first, { size: 'large' })).toDataURL(); } catch { /* no icon */ }
+  }
+  let detail;
+  if (files.length > 1) {
+    const total = files.reduce((sum, f) => { try { return sum + fs.statSync(f).size; } catch { return sum; } }, 0);
+    detail = `${files.length} files · ${formatBytes(total)}`;
+  } else {
+    let size = '';
+    try { size = formatBytes(fs.statSync(first).size); } catch { /* unreadable */ }
+    detail = [path.extname(first).slice(1).toUpperCase(), size].filter(Boolean).join(' · ');
+  }
+  return { thumb, name: files.length > 1 ? `${files.length} files` : path.basename(first), detail };
 }
 
 function hideOverlay() {
@@ -236,6 +268,7 @@ function status() {
 // ---------- IPC ----------
 
 ipcMain.handle('menu:for', (_e, { files, kinds }) => catalog.menuFor(files || [], kinds || []));
+ipcMain.handle('file:info', (_e, files) => fileInfo(files));
 ipcMain.on('overlay:run', (_e, actionId, files) => { hideOverlay(); runAction(actionId, files); });
 ipcMain.on('overlay:hide', () => hideOverlay());
 ipcMain.on('overlay:mode', (_e, mode) => {
