@@ -250,10 +250,20 @@ function startTrigger() {
   trigger.start({ onDragStart, onDragEnd, modifier: settings.get().modifier });
 }
 
+// Identifies this installed copy of the app: changes whenever a new build is installed.
+function buildId() {
+  try { return `${app.getVersion()}-${Math.round(fs.statSync(process.execPath).mtimeMs)}`; } catch { return app.getVersion(); }
+}
+
 // Shows the native macOS Accessibility prompt, then starts the hook as soon as it's granted.
 let permissionPoll = null;
 function requestPermissionAndWait() {
   trigger.requestPermission();
+  waitForPermission();
+}
+
+// Starts the hook as soon as permission appears, without prompting.
+function waitForPermission() {
   clearInterval(permissionPoll);
   permissionPoll = setInterval(() => {
     if (!trigger.hasPermission()) return;
@@ -337,6 +347,8 @@ function createTray() {
   tray.setToolTip('Orbital');
   const build = () => Menu.buildFromTemplate([
     { label: 'Open Picker', accelerator: settings.get().shortcut, click: onShortcut },
+    ...(trigger.supported() && !trigger.hasPermission()
+      ? [{ label: 'Enable Shift-Drag…', click: requestPermissionAndWait }] : []),
     { label: 'Settings…', click: openHome },
     { type: 'separator' },
     {
@@ -375,7 +387,18 @@ app.whenReady().then(() => {
   createOverlay();
   applySettings();
   // No windows at launch: Orbital lives in the menu bar and only shows the picker.
-  if (trigger.supported() && !trigger.hasPermission()) requestPermissionAndWait();
+  // Ask for Accessibility once per installed build, not on every launch. Unsigned builds get a
+  // new identity each time, so a reinstall legitimately needs asking again; after that, the
+  // menu-bar Settings window shows the status and a button to grant it.
+  if (trigger.supported() && !trigger.hasPermission()) {
+    const build = buildId();
+    if (settings.get().permissionPromptedFor !== build) {
+      settings.set({ permissionPromptedFor: build });
+      requestPermissionAndWait();
+    } else {
+      waitForPermission();
+    }
+  }
   checkForUpdates();
   setInterval(checkForUpdates, 6 * 60 * 60 * 1000);
 });
