@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src file:">
+  <title>Orbital Editor</title>
+  <link rel="stylesheet" href="home.css">
+  <link rel="stylesheet" href="editor.css">
+</head>
+<body>
+  <header class="titlebar">
+    <div class="brand"><span class="logo" aria-hidden="true"></span><span id="title">Editor</span></div>
+    <div class="actions">
+      <button id="cancel" class="ghost">Cancel</button>
+      <button id="apply" class="primary">Save copy</button>
+    </div>
+  </header>
+
+  <main id="trim" hidden>
+    <div class="viewer">
+      <video id="media" preload="auto"></video>
+      <div id="audio-art" class="audio-art" hidden></div>
+      <div id="noplay" class="muted small" hidden>Preview isn't available for this format, but trimming still works.</div>
+    </div>
+    <div class="timeline" id="timeline">
+      <div class="range" id="range"></div>
+      <div class="playhead" id="playhead"></div>
+      <div class="handle" id="h-start" data-h="start" tabindex="0" aria-label="Start"></div>
+      <div class="handle" id="h-end" data-h="end" tabindex="0" aria-label="End"></div>
+    </div>
+    <div class="times">
+      <label>Start <input id="t-start" type="text"></label>
+      <button id="play" class="ghost">▶ Play selection</button>
+      <span id="t-len" class="muted"></span>
+      <label>End <input id="t-end" type="text"></label>
+    </div>
+  </main>
+
+  <main id="crop" hidden>
+    <div class="ratios" id="ratios"></div>
+    <div class="crop-wrap" id="crop-wrap">
+      <img id="img" alt="">
+      <div id="box" class="box">
+        <i data-c="nw"></i><i data-c="ne"></i><i data-c="sw"></i><i data-c="se"></i>
+      </div>
+    </div>
+    <div class="muted small center" id="dims"></div>
+  </main>
+
+  <script src="editor.js"></script>
+</body>
+</html>

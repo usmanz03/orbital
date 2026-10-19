@@ -1,0 +1,138 @@
+{
+  "name": "orbital",
+  "productName": "Orbital",
+  "version": "0.1.0",
+  "description": "Hold Shift, drag a file, pick a conversion. Local, private file conversion from a radial menu.",
+  "main": "src/main/main.js",
+  "author": "Orbital",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "icons": "node scripts/make-icons.js",
+    "test": "node scripts/smoke-test.js",
+    "dist": "npm run icons && electron-builder",
+    "dist:mac": "npm run icons && electron-builder --mac",
+    "dist:win": "npm run icons && electron-builder --win",
+    "dist:linux": "npm run icons && electron-builder --linux",
+    "release": "npm run icons && electron-builder --publish always"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9",
+    "ffmpeg-static": "^5.3.0",
+    "mammoth": "^1.13.0",
+    "marked": "^18.1.1",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.4.299",
+    "sharp": "^0.35.5",
+    "turndown": "^7.2.4",
+    "uiohook-napi": "^1.5.5"
+  },
+  "devDependencies": {
+    "electron": "^44.9.0",
+    "electron-builder": "^26.15.3"
+  },
+  "allowScripts": {
+    "ffmpeg-static@5.3.0": true,
+    "uiohook-napi@1.5.5": true,
+    "electron-winstaller@5.4.0": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/usmanz03/orbital.git"
+  },
+  "homepage": "https://usmanz03.github.io/orbital",
+  "build": {
+    "appId": "app.orbital.desktop",
+    "productName": "Orbital",
+    "copyright": "Copyright © 2026 Orbital",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json",
+      "!**/*.map",
+      "!node_modules/pdfjs-dist/legacy/**",
+      "!node_modules/pdfjs-dist/types/**",
+      "!node_modules/pdfjs-dist/web/**",
+      "!node_modules/pdfjs-dist/image_decoders/**",
+      "!node_modules/@napi-rs/**"
+    ],
+    "asarUnpack": [
+      "node_modules/ffmpeg-static/**",
+      "node_modules/sharp/**",
+      "node_modules/@img/**",
+      "node_modules/uiohook-napi/**"
+    ],
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "build/icon.png",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "extendInfo": {
+        "LSUIElement": true,
+        "NSAppleEventsUsageDescription": "Orbital reads your Finder selection when you press the Orbital shortcut."
+      }
+    },
+    "dmg": {
+      "title": "Orbital ${version}",
+      "contents": [
+        {
+          "x": 150,
+          "y": 190
+        },
+        {
+          "x": 390,
+          "y": 190,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ],
+      "window": {
+        "width": 540,
+        "height": 380
+      }
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis"
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Orbital"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Utility",
+      "icon": "build/icon.png",
+      "maintainer": "Orbital",
+      "synopsis": "Hold Shift, drag a file, convert it."
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "releaseType": "release"
+      }
+    ]
+  }
+}

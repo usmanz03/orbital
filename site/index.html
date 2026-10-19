@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orbital: convert files with Shift + drag</title>
+  <meta name="description" content="Hold Shift, drag any file, pick a conversion from a radial menu. 135+ conversions for images, video, audio, PDFs and documents, all on your computer. Free for Mac, Windows and Linux.">
+  <meta property="og:title" content="Orbital: convert files with Shift + drag">
+  <meta property="og:description" content="Hold Shift, drag a file, pick a conversion. Images, video, audio, PDFs and docs, all converted locally.">
+  <meta property="og:image" content="og-icon.png">
+  <meta name="twitter:card" content="summary">
+  <link rel="icon" href="icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #08090e; --panel: #11131b; --panel-2: #171a25; --line: rgba(255,255,255,.08);
+      --ink: #f1f3f9; --muted: #9098ad; --accent: #7c5cff; --accent-2: #3dd6f5;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 Inter, -apple-system, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: inherit; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+    nav { display: flex; align-items: center; justify-content: space-between; padding: 22px 0; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; text-decoration: none; }
+    .brand img { width: 32px; height: 32px; }
+    nav .links { display: flex; gap: 22px; font-size: 14px; color: var(--muted); }
+    nav .links a { text-decoration: none; }
+    nav .links a:hover { color: var(--ink); }
+
+    .hero { display: grid; grid-template-columns: 1.05fr 1fr; gap: 48px; align-items: center; padding: 48px 0 72px; }
+    .eyebrow { display: inline-flex; gap: 8px; align-items: center; font-size: 13px; color: var(--accent-2); background: rgba(61,214,245,.08); border: 1px solid rgba(61,214,245,.2); padding: 5px 12px; border-radius: 999px; }
+    h1 { font-size: clamp(38px, 5.4vw, 62px); line-height: 1.04; letter-spacing: -.035em; margin: 18px 0 18px; font-weight: 800; }
+    h1 .grad { background: linear-gradient(100deg, #a48bff, var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .lede { font-size: 18px; color: var(--muted); max-width: 520px; margin: 0 0 28px; }
+    kbd { font: 600 .85em/1 ui-monospace, Menlo, monospace; padding: 3px 8px; border-radius: 6px; background: var(--panel-2); border: 1px solid var(--line); border-bottom-width: 3px; color: var(--ink); }
+
+    .cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+    .btn { display: inline-flex; align-items: center; gap: 10px; padding: 14px 22px; border-radius: 12px; font-weight: 600; text-decoration: none; border: 1px solid var(--line); background: var(--panel-2); transition: transform .12s, filter .12s; }
+    .btn:hover { transform: translateY(-1px); filter: brightness(1.12); }
+    .btn.primary { background: linear-gradient(135deg, var(--accent), #5b7bff); border-color: transparent; color: #fff; box-shadow: 0 10px 30px rgba(124,92,255,.35); }
+    .btn svg { width: 20px; height: 20px; }
+    .sub { font-size: 13px; color: var(--muted); margin-top: 12px; }
+
+    .demo { position: relative; aspect-ratio: 1; max-width: 500px; width: 100%; justify-self: center; }
+    .demo svg { width: 100%; height: 100%; overflow: visible; }
+    .demo .file { position: absolute; left: 2%; top: 74%; width: 76px; padding: 10px 0 8px; text-align: center; font-size: 11px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); box-shadow: 0 10px 30px rgba(0,0,0,.4); animation: drag 6s ease-in-out infinite; }
+    .demo .file b { display: block; width: 34px; height: 42px; margin: 0 auto 6px; border-radius: 4px; background: linear-gradient(135deg, #f59e0b, #ef4444); }
+    /* Ends over the "WebP" slice of the ring */
+    @keyframes drag { 0%, 8% { left: 2%; top: 74%; opacity: 0; } 14% { opacity: 1; } 55%, 92% { left: 38%; top: 5%; opacity: 1; transform: scale(.85); } 100% { left: 38%; top: 5%; opacity: 0; transform: scale(.85); } }
+    .ring-seg { fill: #161927; stroke: rgba(255,255,255,.07); }
+    .ring-seg.on { fill: url(#g); }
+    .act-seg { fill: #1d2131; stroke: rgba(255,255,255,.07); }
+    .act-seg.on { fill: #7c5cff; }
+    .lbl { fill: #e8ebf4; font: 600 12px Inter, sans-serif; text-anchor: middle; }
+    .lbl.small { font-size: 10.5px; font-weight: 500; }
+
+    section { padding: 72px 0; border-top: 1px solid var(--line); }
+    h2 { font-size: clamp(28px, 3.4vw, 40px); letter-spacing: -.025em; margin: 0 0 12px; line-height: 1.15; }
+    .section-lede { color: var(--muted); max-width: 620px; margin: 0 0 40px; font-size: 17px; }
+
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .step { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 24px; }
+    .step .n { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; background: rgba(124,92,255,.16); color: #b6a4ff; margin-bottom: 14px; }
+    .step h3 { margin: 0 0 6px; font-size: 18px; }
+    .step p { margin: 0; color: var(--muted); font-size: 15px; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 22px; }
+    .card h3 { margin: 0 0 8px; font-size: 17px; display: flex; align-items: center; gap: 10px; }
+    .card h3 i { width: 10px; height: 10px; border-radius: 50%; background: var(--c, var(--accent)); box-shadow: 0 0 12px var(--c, var(--accent)); }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .chips span { font-size: 12.5px; padding: 3px 9px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); color: #c9cee0; }
+
+    .privacy { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; }
+    .privacy ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; }
+    .privacy li { display: flex; gap: 12px; color: var(--muted); }
+    .privacy li b { color: var(--ink); }
+    .privacy li::before { content: "✓"; color: var(--accent-2); font-weight: 700; }
+
+    .downloads { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .dl { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 10px; }
+    .dl.mine { border-color: rgba(124,92,255,.6); box-shadow: 0 0 0 1px rgba(124,92,255,.3), 0 20px 50px rgba(124,92,255,.12); }
+    .dl h3 { margin: 0; font-size: 20px; }
+    .dl .muted { color: var(--muted); font-size: 14px; margin: 0; }
+    .dl a.file-link { display: flex; justify-content: space-between; align-items: center; gap: 10px; text-decoration: none; padding: 11px 14px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); font-weight: 500; font-size: 14.5px; }
+    .dl a.file-link:hover { border-color: rgba(124,92,255,.6); }
+    .dl a.file-link span { color: var(--muted); font-size: 12.5px; font-weight: 400; }
+
+    details { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; margin-bottom: 10px; }
+    summary { cursor: pointer; font-weight: 600; }
+    details p, details ol { color: var(--muted); margin: 10px 0 0; }
+    code { font: 13.5px ui-monospace, Menlo, monospace; background: var(--panel-2); padding: 2px 6px; border-radius: 5px; color: var(--ink); }
+
+    footer { border-top: 1px solid var(--line); padding: 32px 0 48px; color: var(--muted); font-size: 14px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+
+    @media (max-width: 860px) {
+      .hero, .privacy { grid-template-columns: 1fr; }
+      .steps, .downloads { grid-template-columns: 1fr; }
+      nav .links { display: none; }
+      .demo { max-width: 380px; }
+    }
+    @media (prefers-reduced-motion: reduce) { .demo .file { animation: none; opacity: 1; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav>
+      <a class="brand" href="#"><img src="icon.png" alt="">Orbital</a>
+      <div class="links">
+        <a href="#how">How it works</a>
+        <a href="#features">Features</a>
+        <a href="#download">Download</a>
+        <a href="https://github.com/usmanz03/orbital">GitHub</a>
+      </div>
+    </nav>
+
+    <header class="hero">
+      <div>
+        <span class="eyebrow">● Free · Mac, Windows &amp; Linux</span>
+        <h1>Convert any file with <span class="grad">Shift + drag.</span></h1>
+        <p class="lede">Hold <kbd>Shift</kbd>, drag a file, and a radial menu opens under your cursor. Drop it on <em>WebP</em>, <em>MP4</em>, <em>Compress</em> or <em>Merge PDF</em> and it's done. No uploads, no extra apps, no menus to dig through.</p>
+        <div class="cta">
+          <a id="hero-dl" class="btn primary" href="#download">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"/></svg>
+            <span id="hero-dl-label">Download Orbital</span>
+          </a>
+          <a class="btn" href="#how">See how it works</a>
+        </div>
+        <div class="sub" id="hero-sub">135+ conversions · 100% on your computer</div>
+      </div>
+
+      <div class="demo" aria-hidden="true">
+        <svg viewBox="0 0 500 500" id="demo-svg"></svg>
+        <div class="file"><b></b>photo.heic</div>
+      </div>
+    </header>
+  </div>
+
+  <section id="how">
+    <div class="wrap">
+      <h2>Three moves. Zero menus.</h2>
+      <p class="section-lede">Orbital lives quietly in your menu bar. It shows up only when you need it.</p>
+      <div class="steps">
+        <div class="step"><div class="n">1</div><h3>Hold Shift and drag</h3><p>Start dragging any file from Finder, Explorer, your desktop or an app, with <kbd>Shift</kbd> held.</p></div>
+        <div class="step"><div class="n">2</div><h3>Pick from the ring</h3><p>Orbital fans out the options that fit that file: convert, compress, resize, crop, trim, merge and more.</p></div>
+        <div class="step"><div class="n">3</div><h3>Drop. Done.</h3><p>The new file is saved right next to the original. Or select files and press <kbd>⌘ ⇧ Space</kbd>, then type to search.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="wrap">
+      <h2>One ring for every file</h2>
+      <p class="section-lede">Orbital includes 135+ ready-made actions, and merges kick in automatically when you drag several files at once.</p>
+      <div class="grid">
+        <div class="card" style="--c:#f59e0b"><h3><i></i>Images</h3><p class="muted" style="color:var(--muted);margin:0">Convert, smart-crop to social sizes, resize, compress and batch-edit.</p>
+          <div class="chips"><span>PNG</span><span>JPG</span><span>WebP</span><span>AVIF</span><span>HEIC in</span><span>ICO</span><span>GIF</span><span>1:1 · 4:5 · 9:16</span><span>Images → PDF</span><span>Stitch</span></div></div>
+        <div class="card" style="--c:#ef4444"><h3><i></i>Video</h3><p style="color:var(--muted);margin:0">Shrink a video to fit an email, trim it, change the aspect ratio for Reels, or turn it into a GIF.</p>
+          <div class="chips"><span>MP4</span><span>HEVC</span><span>WebM</span><span>MOV</span><span>GIF</span><span>Under 25 MB</span><span>1080p · 720p</span><span>Trim</span><span>Mute</span><span>Join</span></div></div>
+        <div class="card" style="--c:#22c55e"><h3><i></i>Audio</h3><p style="color:var(--muted);margin:0">Extract audio from any video, normalise loudness, cut silences and speed up.</p>
+          <div class="chips"><span>MP3</span><span>M4A</span><span>WAV</span><span>FLAC</span><span>Opus</span><span>Normalize</span><span>Cut silence</span><span>1.5×</span><span>Trim</span><span>Join</span></div></div>
+        <div class="card" style="--c:#7c5cff"><h3><i></i>PDF</h3><p style="color:var(--muted);margin:0">Merge, split, compress, rotate, or export pages as images or text.</p>
+          <div class="chips"><span>Merge</span><span>Split</span><span>Compress</span><span>Rotate</span><span>PDF → PNG</span><span>PDF → JPG</span><span>Extract text</span></div></div>
+        <div class="card" style="--c:#3dd6f5"><h3><i></i>Documents &amp; data</h3><p style="color:var(--muted);margin:0">Turn Word, Markdown and HTML files into clean PDFs and back, and convert between CSV and JSON.</p>
+          <div class="chips"><span>DOCX → PDF</span><span>Markdown → PDF</span><span>HTML</span><span>Markdown</span><span>RTF</span><span>CSV ↔ JSON</span></div></div>
+        <div class="card" style="--c:#e879f9"><h3><i></i>Built for speed</h3><p style="color:var(--muted);margin:0">Batch dozens of files in one drop. Type to search the ring, use the arrow keys, and press Enter.</p>
+          <div class="chips"><span>Batch</span><span>Keyboard search</span><span>Progress in menu bar</span><span>Notifications</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap privacy">
+      <div>
+        <h2>Your files never leave your computer.</h2>
+        <p class="section-lede" style="margin:0">Most "free converters" upload your files to a server you know nothing about. Orbital doesn't. Every conversion runs locally with the same engines the pros use: FFmpeg, libvips and PDF.js.</p>
+      </div>
+      <ul>
+        <li><span><b>No uploads.</b> Works fully offline, even on a plane.</span></li>
+        <li><span><b>No account, no tracking.</b> Download it and use it.</span></li>
+        <li><span><b>Fast.</b> Images convert in milliseconds, and video runs on every CPU core.</span></li>
+        <li><span><b>Open source.</b> Read every line on GitHub.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="download">
+    <div class="wrap">
+      <h2>Download Orbital</h2>
+      <p class="section-lede" id="dl-lede">Free. Pick your system below.</p>
+      <div class="downloads">
+        <div class="dl" data-os="mac">
+          <h3>macOS</h3>
+          <p class="muted">macOS 12 or later</p>
+          <a class="file-link" data-asset="mac-arm64.dmg" href="https://github.com/usmanz03/orbital/releases/latest">Apple Silicon (M1 to M4) <span>.dmg</span></a>
+          <a class="file-link" data-asset="mac-x64.dmg" href="https://github.com/usmanz03/orbital/releases/latest">Intel Mac <span>.dmg</span></a>
+        </div>
+        <div class="dl" data-os="win">
+          <h3>Windows</h3>
+          <p class="muted">Windows 10 and 11, 64-bit</p>
+          <a class="file-link" data-asset="win-x64.exe" href="https://github.com/usmanz03/orbital/releases/latest">Installer <span>.exe</span></a>
+        </div>
+        <div class="dl" data-os="linux">
+          <h3>Linux</h3>
+          <p class="muted">X11 for Shift-drag. Wayland uses the shortcut.</p>
+          <a class="file-link" data-asset="linux-x86_64.AppImage" href="https://github.com/usmanz03/orbital/releases/latest">AppImage <span>.AppImage</span></a>
+          <a class="file-link" data-asset="linux-amd64.deb" href="https://github.com/usmanz03/orbital/releases/latest">Debian / Ubuntu <span>.deb</span></a>
+        </div>
+      </div>
+
+      <div style="margin-top:40px">
+        <details>
+          <summary>macOS says "Orbital can't be opened" or "is damaged"</summary>
+          <p>That message appears for apps that aren't signed with a paid Apple certificate yet. To open Orbital anyway:</p>
+          <ol>
+            <li>Drag Orbital into <b>Applications</b>.</li>
+            <li>Right-click Orbital and choose <b>Open</b>, then <b>Open</b> again. If that doesn't work, run <code>xattr -cr /Applications/Orbital.app</code> in Terminal.</li>
+          </ol>
+        </details>
+        <details>
+          <summary>Why does Orbital ask for Accessibility access on Mac?</summary>
+          <p>To notice that you're dragging with Shift held, Orbital watches mouse movement system-wide, and macOS requires your OK for that. Orbital never reads what you type. It also works without the permission: select files in Finder and press <kbd>⌘ ⇧ Space</kbd>.</p>
+        </details>
+        <details>
+          <summary>Where do converted files go?</summary>
+          <p>Right next to the original, with a clear name like <code>photo-1x1.jpg</code> or <code>clip-25MB.mp4</code>. Originals are never overwritten. You can choose a different folder in Settings, from the menu-bar icon.</p>
+        </details>
+        <details>
+          <summary>Windows SmartScreen warning</summary>
+          <p>Click <b>More info</b>, then <b>Run anyway</b>. This shows up for new apps that haven't built a download reputation yet.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap">
+    <footer>
+      <span>Orbital · Made for people who convert files more often than they'd like.</span>
+      <span id="version"></span>
+    </footer>
+  </div>
+
+  <script>
+    const REPO = 'usmanz03/orbital';
+
+    // ---- OS detection → highlight the right download ----
+    const ua = navigator.userAgent;
+    const os = /Mac/.test(ua) ? 'mac' : /Win/.test(ua) ? 'win' : /Linux|X11/.test(ua) ? 'linux' : null;
+    const OS_NAME = { mac: 'macOS', win: 'Windows', linux: 'Linux' };
+    if (os) {
+      document.querySelector(`.dl[data-os="${os}"]`)?.classList.add('mine');
+      document.getElementById('hero-dl-label').textContent = `Download for ${OS_NAME[os]}`;
+    }
+
+    // ---- Resolve direct asset links from the latest GitHub release ----
+    (async () => {
+      try {
+        const r = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`);
+        if (!r.ok) return;
+        const rel = await r.json();
+        document.getElementById('version').textContent = `Latest: ${rel.tag_name}`;
+        document.getElementById('dl-lede').textContent = `Free. Version ${rel.tag_name.replace(/^v/, '')} is ready for your system.`;
+        const find = (suffix) => rel.assets.find((a) => a.name.endsWith(suffix));
+        document.querySelectorAll('[data-asset]').forEach((a) => {
+          const asset = find(a.dataset.asset);
+          if (asset) {
+            a.href = asset.browser_download_url;
+            a.querySelector('span').textContent = `${a.querySelector('span').textContent.trim()} · ${Math.round(asset.size / 1e6)} MB`;
+          }
+        });
+        // Hero button downloads directly for the visitor's OS.
+        let pick = null;
+        if (os === 'mac') {
+          // Apple Silicon is the safe default for modern Macs; Intel users pick below.
+          pick = find('mac-arm64.dmg') || find('mac-x64.dmg');
+        } else if (os === 'win') pick = find('win-x64.exe');
+        else if (os === 'linux') pick = find('linux-x86_64.AppImage');
+        if (pick) document.getElementById('hero-dl').href = pick.browser_download_url;
+        if (os === 'mac') document.getElementById('hero-sub').innerHTML = 'For Apple Silicon. <a href="#download">Intel Mac?</a> · 100% local';
+      } catch { /* links fall back to the releases page */ }
+    })();
+
+    // ---- Animated radial demo ----
+    (function demo() {
+      const svg = document.getElementById('demo-svg');
+      const C = 250, cats = ['Convert', 'Compress', 'Resize', 'Crop', 'Edit', 'Merge'];
+      const acts = ['PNG', 'JPG', 'WebP', 'AVIF', 'PDF'];
+      const rad = (d) => d * Math.PI / 180;
+      const pt = (r, a) => [C + r * Math.sin(rad(a)), C - r * Math.cos(rad(a))];
+      const sector = (r1, r2, a0, a1) => {
+        const [x1, y1] = pt(r2, a0), [x2, y2] = pt(r2, a1), [x3, y3] = pt(r1, a1), [x4, y4] = pt(r1, a0);
+        const l = a1 - a0 > 180 ? 1 : 0;
+        return `M${x1},${y1}A${r2},${r2} 0 ${l} 1 ${x2},${y2}L${x3},${y3}A${r1},${r1} 0 ${l} 0 ${x4},${y4}Z`;
+      };
+      let step = 0;
+      function frame() {
+        const phase = step % 6; // 0: hidden, 1: ring, 2: convert, 3-4: hover acts, 5: done
+        const span = 60;
+        let html = `<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c5cff"/><stop offset="1" stop-color="#3dd6f5"/></linearGradient>
+          <filter id="s"><feDropShadow dx="0" dy="10" stdDeviation="16" flood-opacity=".5"/></filter></defs>`;
+        const op = phase === 0 ? 0 : 1;
+        html += `<g filter="url(#s)" style="opacity:${op};transition:opacity .4s">`;
+        cats.forEach((c, i) => {
+          const a = i * span;
+          const [lx, ly] = pt(98, a);
+          html += `<path class="ring-seg ${phase >= 2 && i === 0 ? 'on' : ''}" d="${sector(54, 140, a - span / 2 + 1.2, a + span / 2 - 1.2)}"/>
+            <text class="lbl" x="${lx}" y="${ly + 4}">${c}</text>`;
+        });
+        if (phase >= 2) {
+          const seg = 30, start = -seg * acts.length / 2;
+          acts.forEach((t, i) => {
+            const a0 = start + i * seg;
+            const [lx, ly] = pt(190, a0 + seg / 2);
+            const on = (phase === 3 && i === 1) || (phase >= 4 && i === 2);
+            html += `<path class="act-seg ${on ? 'on' : ''}" d="${sector(148, 236, a0 + .8, a0 + seg - .8)}"/>
+              <text class="lbl small" x="${lx}" y="${ly + 4}">${t}</text>`;
+          });
+        }
+        html += `<circle cx="${C}" cy="${C}" r="48" fill="#12141d" stroke="rgba(255,255,255,.14)"/>
+          <text class="lbl" x="${C}" y="${C - 2}">${phase >= 5 ? '✓ Saved' : phase >= 4 ? 'WebP' : 'photo.heic'}</text>
+          <text class="lbl small" x="${C}" y="${C + 15}" style="fill:#9098ad">${phase >= 5 ? 'photo.webp' : 'Shift + drag'}</text></g>`;
+        svg.innerHTML = html;
+        step++;
+      }
+      frame();
+      setInterval(frame, 1000);
+    })();
+  </script>
+</body>
+</html>

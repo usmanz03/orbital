@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+  <title>Orbital</title>
+  <link rel="stylesheet" href="home.css">
+</head>
+<body>
+  <header class="titlebar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true"></span>
+      <span>Orbital</span>
+    </div>
+    <span id="pill" class="pill">…</span>
+  </header>
+
+  <main>
+    <section id="permission" class="card warn" hidden>
+      <div>
+        <h2>Turn on Shift-drag</h2>
+        <p id="perm-text">Orbital needs <b>Accessibility</b> access to notice when you drag a file while holding Shift. It only looks at mouse movement, never what you type.</p>
+      </div>
+      <button id="grant" class="primary">Open System Settings</button>
+    </section>
+
+    <section id="drop" class="drop">
+      <div class="orbit" aria-hidden="true"><i></i><i></i><i></i></div>
+      <h1>Hold <kbd id="mod-key">⇧ Shift</kbd> and drag any file</h1>
+      <p>A radial menu opens under your cursor. Drop on an action and you're done. You can also drop files here, or select them in Finder and press <kbd id="shortcut"></kbd>.</p>
+    </section>
+
+    <div class="grid">
+      <section class="card">
+        <h3>Recent</h3>
+        <ul id="jobs" class="jobs"><li class="empty">Converted files show up here and are saved next to the original.</li></ul>
+      </section>
+
+      <section class="card">
+        <h3>Settings</h3>
+        <label class="row">
+          <span>Trigger key</span>
+          <select id="modifier">
+            <option value="shift">Shift</option>
+            <option value="alt">Option / Alt</option>
+            <option value="ctrl">Control</option>
+          </select>
+        </label>
+        <label class="row">
+          <span>Drag trigger</span>
+          <input type="checkbox" id="triggerEnabled" class="switch">
+        </label>
+        <div class="row">
+          <span>Save to</span>
+          <div class="seg-ctl">
+            <button data-out="same">Same folder</button>
+            <button data-out="folder">Choose…</button>
+          </div>
+        </div>
+        <div id="outdir" class="muted small"></div>
+        <label class="row">
+          <span>Open at login</span>
+          <input type="checkbox" id="openAtLogin" class="switch">
+        </label>
+      </section>
+    </div>
+
+    <section class="card">
+      <h3>Everything Orbital can do <span id="count" class="muted"></span></h3>
+      <div id="catalog" class="catalog"></div>
+    </section>
+
+    <footer class="muted small">
+      <span>100% local. Files never leave your computer.</span>
+      <span id="version"></span>
+    </footer>
+  </main>
+  <script src="icons.js"></script>
+  <script src="home.js"></script>
+</body>
+</html>
