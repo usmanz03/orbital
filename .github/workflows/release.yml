@@ -54,7 +54,12 @@ jobs:
       - run: npm test
       - run: npm run icons
       - name: Build and upload
-        run: npx electron-builder ${{ matrix.args }} --publish always
+        shell: bash
+        # Without a Developer ID certificate, ad-hoc sign Mac builds so Apple Silicon doesn't report them as damaged.
+        run: |
+          EXTRA=""
+          if [[ "$RUNNER_OS" == "macOS" && -z "$CSC_LINK" ]]; then EXTRA="-c.mac.identity=-"; fi
+          npx electron-builder ${{ matrix.args }} $EXTRA --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Optional macOS signing + notarization. Without these the app is unsigned

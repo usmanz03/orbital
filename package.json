@@ -4,7 +4,10 @@
   "version": "0.1.0",
   "description": "Hold Shift, drag a file, pick a conversion. Local, private file conversion from a radial menu.",
   "main": "src/main/main.js",
-  "author": "Orbital",
+  "author": {
+    "name": "Orbital",
+    "email": "usmanz03@users.noreply.github.com"
+  },
   "license": "MIT",
   "private": true,
   "scripts": {
@@ -128,7 +131,7 @@
       ],
       "category": "Utility",
       "icon": "build/icon.png",
-      "maintainer": "Orbital",
+      "maintainer": "Orbital <usmanz03@users.noreply.github.com>",
       "synopsis": "Hold Shift, drag a file, convert it."
     },
     "publish": [
