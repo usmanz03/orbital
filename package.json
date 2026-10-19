@@ -20,6 +20,7 @@
   "dependencies": {
     "electron-updater": "^6.8.9",
     "ffmpeg-static": "^5.3.0",
+    "koffi": "^3.3.3",
     "mammoth": "^1.13.0",
     "marked": "^18.1.1",
     "pdf-lib": "^1.17.1",
@@ -35,7 +36,8 @@
   "allowScripts": {
     "ffmpeg-static@5.3.0": true,
     "uiohook-napi@1.5.5": true,
-    "electron-winstaller@5.4.0": true
+    "electron-winstaller@5.4.0": true,
+    "koffi": false
   },
   "repository": {
     "type": "git",
@@ -65,7 +67,8 @@
       "node_modules/ffmpeg-static/**",
       "node_modules/sharp/**",
       "node_modules/@img/**",
-      "node_modules/uiohook-napi/**"
+      "node_modules/uiohook-napi/**",
+      "node_modules/koffi/**"
     ],
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "mac": {
