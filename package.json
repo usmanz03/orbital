@@ -15,7 +15,7 @@
     "icons": "node scripts/make-icons.js",
     "test": "node scripts/smoke-test.js",
     "dist": "npm run icons && electron-builder",
-    "dist:mac": "npm run icons && electron-builder --mac",
+    "dist:mac": "npm run icons && electron-builder --mac -c.mac.identity=-",
     "dist:win": "npm run icons && electron-builder --win",
     "dist:linux": "npm run icons && electron-builder --linux",
     "release": "npm run icons && electron-builder --publish always"
