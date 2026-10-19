@@ -20,6 +20,7 @@ const ASSETS = path.join(__dirname, '..', '..', 'assets');
 const RENDERER = path.join(__dirname, '..', 'renderer');
 const PRELOAD = path.join(__dirname, '..', 'preload');
 const OVERLAY_SIZE = 640;
+const { SECURE_PREFS, lockDown } = require('./security');
 
 let tray = null;
 let overlay = null;
@@ -49,7 +50,7 @@ function createOverlay() {
     alwaysOnTop: true,
     backgroundColor: '#00000000',
     ...(isMac ? { type: 'panel' } : { type: 'toolbar' }),
-    webPreferences: { preload: path.join(PRELOAD, 'overlay.js'), contextIsolation: true, sandbox: false, backgroundThrottling: false },
+    webPreferences: { ...SECURE_PREFS, preload: path.join(PRELOAD, 'overlay.js'), backgroundThrottling: false },
   });
   overlay.setAlwaysOnTop(true, 'screen-saver');
   overlay.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
@@ -185,7 +186,7 @@ function openHome() {
     title: 'Orbital Settings',
     ...windowChrome(),
     show: false,
-    webPreferences: { preload: path.join(PRELOAD, 'home.js'), contextIsolation: true, sandbox: false },
+    webPreferences: { ...SECURE_PREFS, preload: path.join(PRELOAD, 'home.js') },
   });
   home.loadFile(path.join(RENDERER, 'home.html'));
   home.once('ready-to-show', () => { home.show(); if (isMac) app.focus({ steal: true }); });
@@ -202,7 +203,7 @@ function openEditor(kind, file) {
     title: kind === 'crop' ? `Crop — ${path.basename(file)}` : `Trim — ${path.basename(file)}`,
     ...windowChrome(),
     show: false,
-    webPreferences: { preload: path.join(PRELOAD, 'editor.js'), contextIsolation: true, sandbox: false },
+    webPreferences: { ...SECURE_PREFS, preload: path.join(PRELOAD, 'editor.js') },
   });
   editor.loadFile(path.join(RENDERER, 'editor.html'), { query: { kind, file } });
   editor.once('ready-to-show', () => { editor.show(); if (isMac) app.focus({ steal: true }); });
@@ -368,6 +369,7 @@ app.on('will-quit', () => { globalShortcut.unregisterAll(); trigger.stop(); });
 
 app.whenReady().then(() => {
   readyAt = Date.now();
+  lockDown();
   if (isMac) app.dock?.hide();
   createTray();
   createOverlay();

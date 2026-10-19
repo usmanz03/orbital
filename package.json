@@ -18,7 +18,8 @@
     "dist:mac": "npm run icons && electron-builder --mac -c.mac.identity=-",
     "dist:win": "npm run icons && electron-builder --win",
     "dist:linux": "npm run icons && electron-builder --linux",
-    "release": "npm run icons && electron-builder --publish always"
+    "release": "npm run icons && electron-builder --publish always",
+    "test:security": "electron scripts/security-test.js"
   },
   "dependencies": {
     "electron-updater": "^6.8.9",

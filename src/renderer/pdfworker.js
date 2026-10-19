@@ -5,6 +5,8 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL('build/pdf.worker.mjs', lib).href;
 
 const open = (data) => pdfjs.getDocument({
   data,
+  isEvalSupported: false,
+  enableScripting: false,
   cMapUrl: new URL('cmaps/', lib).href,
   cMapPacked: true,
   standardFontDataUrl: new URL('standard_fonts/', lib).href,

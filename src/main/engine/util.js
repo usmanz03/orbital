@@ -55,9 +55,14 @@ function parseTime(str) {
 }
 
 // Reads stream info from ffmpeg's banner; avoids shipping ffprobe as well.
+// Crafted media (e.g. an HLS playlist renamed to .mp4) can make ffmpeg read other local files
+// or fetch URLs. Restrict every input to local file access.
+const SAFE_INPUT = ['-protocol_whitelist', 'file,pipe,fd'];
+const restrictInputs = (args) => args.flatMap((a, i) => (a === '-i' && args[i - 1] !== 'lavfi' ? [...SAFE_INPUT, a] : [a]));
+
 function probe(file) {
   return new Promise((resolve) => {
-    execFile(ffmpegPath, ['-hide_banner', '-i', file], (_err, _stdout, stderr) => {
+    execFile(ffmpegPath, ['-hide_banner', ...SAFE_INPUT, '-i', file], (_err, _stdout, stderr) => {
       const duration = parseTime((/Duration: ([\d:.]+)/.exec(stderr) || [])[1] || '');
       const video = /Stream.*Video:.*?(\d{2,5})x(\d{2,5})/.exec(stderr);
       resolve({
@@ -73,7 +78,7 @@ function probe(file) {
 
 function runFfmpeg(args, { duration = 0, onProgress } = {}) {
   return new Promise((resolve, reject) => {
-    const proc = spawn(ffmpegPath, ['-hide_banner', '-y', ...args]);
+    const proc = spawn(ffmpegPath, ['-hide_banner', '-y', ...restrictInputs(args)]);
     let tail = '';
     proc.stderr.on('data', (chunk) => {
       const text = chunk.toString();

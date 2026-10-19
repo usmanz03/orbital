@@ -5,18 +5,21 @@ const path = require('path');
 const { pathToFileURL } = require('url');
 const { BrowserWindow, ipcMain } = require('electron');
 
-const hidden = (preload) => new BrowserWindow({
+const { SECURE_PREFS } = require('./security');
+
+// Untrusted documents are rendered here, so: sandboxed, and no scripts unless pdf.js needs them.
+const hidden = (preload, { javascript = true } = {}) => new BrowserWindow({
   show: false,
   width: 1000,
   height: 1400,
-  webPreferences: { offscreen: false, preload, contextIsolation: true, sandbox: false },
+  webPreferences: { ...SECURE_PREFS, preload, javascript },
 });
 
 async function htmlToPdf(html, baseDir) {
   const withBase = html.replace(/<head>/i, `<head><base href="${pathToFileURL(baseDir + path.sep).href}">`);
   const tmp = path.join(os.tmpdir(), `orbital-print-${Date.now()}.html`);
   fs.writeFileSync(tmp, withBase);
-  const win = hidden();
+  const win = hidden(undefined, { javascript: false });
   try {
     await win.loadFile(tmp);
     return await win.webContents.printToPDF({ pageSize: 'A4', printBackground: true, margins: { top: 0.6, bottom: 0.6, left: 0.6, right: 0.6 } });
