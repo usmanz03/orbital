@@ -6,7 +6,7 @@
   "main": "src/main/main.js",
   "author": {
     "name": "Orbital",
-    "email": "usmanz03@users.noreply.github.com"
+    "email": "162363594+usmanz03@users.noreply.github.com"
   },
   "license": "MIT",
   "private": true,
@@ -131,7 +131,7 @@
       ],
       "category": "Utility",
       "icon": "build/icon.png",
-      "maintainer": "Orbital <usmanz03@users.noreply.github.com>",
+      "maintainer": "Orbital <162363594+usmanz03@users.noreply.github.com>",
       "synopsis": "Hold Shift, drag a file, convert it."
     },
     "publish": [
