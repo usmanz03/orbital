@@ -170,8 +170,10 @@ function paint() {
   document.body.classList.toggle('searching', !!state.query);
   buildCats();
   buildFan();
-  catsEl.querySelectorAll('.cat').forEach((el, i) => el.classList.toggle('active', i === state.cat && !state.query));
-  catsEl.querySelectorAll('.wedge').forEach((el, i) => el.classList.toggle('hover', i === state.cat && !state.query));
+  // With a single category there's nothing to choose between, so don't flood the ring with accent.
+  const showActive = !state.query && state.menu.length > 1;
+  catsEl.querySelectorAll('.cat').forEach((el, i) => el.classList.toggle('active', showActive && i === state.cat));
+  catsEl.querySelectorAll('.wedge').forEach((el, i) => el.classList.toggle('hover', showActive && i === state.cat));
   actsEl.querySelectorAll('.act').forEach((el, i) => el.classList.toggle('hover', i === state.hover));
   actsEl.querySelectorAll('.wedge').forEach((el, i) => el.classList.toggle('hover', i === state.hover));
   paintHub();

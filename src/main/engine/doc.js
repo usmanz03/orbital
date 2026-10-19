@@ -26,11 +26,27 @@ const soffice = () => which('soffice', [
   'C:\\Program Files\\LibreOffice\\program\\soffice.exe',
 ]);
 
+// Word images are inlined as data URIs by default. For text formats (Markdown) that bloats
+// the file enormously, so write them to a sibling folder and link to them instead.
+function imageExporter(imageDir) {
+  let n = 0;
+  return mammoth.images.imgElement(async (image) => {
+    const type = (image.contentType || 'image/png').split('/')[1].replace('jpeg', 'jpg').replace(/^x-/, '');
+    const name = `image-${++n}.${type}`;
+    fs.mkdirSync(imageDir, { recursive: true });
+    fs.writeFileSync(path.join(imageDir, name), await image.read());
+    return { src: `${encodeURIComponent(path.basename(imageDir))}/${name}` };
+  });
+}
+
 // Everything becomes HTML first; every output format starts from there.
-async function toHtmlBody(file) {
+async function toHtmlBody(file, { imageDir } = {}) {
   const e = ext(file);
   const text = () => fs.readFileSync(file, 'utf8');
-  if (e === 'docx') return (await mammoth.convertToHtml({ path: file })).value;
+  if (e === 'docx') {
+    const options = imageDir ? { convertImage: imageExporter(imageDir) } : {};
+    return (await mammoth.convertToHtml({ path: file }, options)).value;
+  }
   if (e === 'md' || e === 'markdown') return marked.parse(text());
   if (e === 'html' || e === 'htm') {
     const html = text();
@@ -109,7 +125,8 @@ module.exports = {
   toMarkdown: async (file) => {
     const td = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' });
     const out = outPath(file, 'md');
-    fs.writeFileSync(out, td.turndown(await toHtmlBody(file)));
+    const imageDir = out.replace(/\.md$/, '-images');
+    fs.writeFileSync(out, td.turndown(await toHtmlBody(file, { imageDir })));
     return out;
   },
   toText: async (file) => {
