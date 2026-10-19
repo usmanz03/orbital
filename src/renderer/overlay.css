@@ -31,6 +31,15 @@ html, body {
 
 svg { position: absolute; inset: 0; overflow: visible; }
 
+/* Near-invisible backing disc: macOS only routes drags to painted pixels. */
+body.drag-mode #stage::before {
+  content: "";
+  position: absolute;
+  inset: 16px;
+  border-radius: 50%;
+  background: rgba(10, 12, 20, 0.02);
+}
+
 .seg { transition: fill 90ms ease; cursor: pointer; }
 .cat .seg { fill: var(--glass); stroke: var(--line); stroke-width: 1; }
 .cat.active .seg { fill: url(#accentGrad); }

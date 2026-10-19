@@ -177,6 +177,7 @@ function reveal() {
 function reset() {
   Object.assign(state, { mode: null, files: [], menu: [], cat: 0, hover: -1, query: '', menuFromKinds: false, revealed: false, loading: null });
   stage.classList.add('hidden');
+  document.body.classList.remove('drag-mode');
   svg.innerHTML = '';
   lastFan = null;
 }
@@ -267,6 +268,7 @@ document.addEventListener('drop', async (e) => {
   state.cat = Math.max(0, menu.findIndex((c) => c.id === prevCat));
   state.hover = -1;
   state.mode = 'menu';
+  document.body.classList.remove('drag-mode');
   window.orbital.setMode('menu');
   reveal();
   render();
@@ -306,7 +308,10 @@ window.orbital.onShow(({ mode, files, menu }) => {
   state.mode = mode;
   state.files = files;
   state.menu = menu;
+  document.body.classList.toggle('drag-mode', mode === 'drag');
   render();
-  if (mode !== 'drag') reveal();
+  // Show immediately: macOS passes drags straight through fully transparent windows,
+  // so an invisible picker would never receive the file.
+  reveal();
 });
 window.orbital.onHide(reset);
